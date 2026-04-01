@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{PAGE_TITLE}}</title>
+    <meta name="description" content="{{PAGE_DESCRIPTION}}">
+    {{HEAD_EXTRA}}
+</head>
+<body>
+    <div style="max-width: 1200px; margin: 0 auto; padding: 24px 16px 40px;">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;">
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+                <a href="{{ROOT_PREFIX}}index.html" style="display: inline-flex; align-items: center; border: 1px solid #d9e2ec; border-radius: 999px; padding: 10px 16px; text-decoration: none; color: #1d2630; font-weight: 700; background: #ffffff;">政策ハブへ戻る</a>
+                <a href="{{ROOT_PREFIX}}policies/index.html" style="text-decoration: none; color: #0f766e; font-weight: 700;">政策一覧</a>
+            </div>
+            <div style="font: 12px/1.5 monospace; color: #667085;">直リンク: /policies/{{SLUG}}/</div>
+        </div>
+
+        {{PAGE_CONTENT}}
+
+        <section style="margin-top: 32px; border: 1px solid #e5e7eb; border-radius: 24px; padding: 24px; background: #ffffff; font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;">
+            <h2 style="margin: 0 0 12px; font-size: 1.4rem;">サイト内導線</h2>
+            <p style="margin: 0 0 18px; color: #5a6470; line-height: 1.7;">
+                外部生成した静的HTMLを取り込む場合でも、この下部導線は残して、ハブ経由と直リンクの両方に対応させます。
+            </p>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+                <a href="{{ROOT_PREFIX}}index.html" style="display: inline-flex; align-items: center; border-radius: 999px; padding: 12px 18px; text-decoration: none; color: #ffffff; font-weight: 700; background: linear-gradient(135deg, #0f766e, #115e59);">政策ハブへ戻る</a>
+                <a href="{{ROOT_PREFIX}}policies/index.html" style="display: inline-flex; align-items: center; border: 1px solid #d9e2ec; border-radius: 999px; padding: 12px 18px; text-decoration: none; color: #1d2630; font-weight: 700; background: #ffffff;">政策一覧へ</a>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{PAGE_TITLE}} | 政策解説シミュレータ</title>
+    <meta name="description" content="{{PAGE_DESCRIPTION}}">
+    <link rel="stylesheet" href="{{ASSET_PREFIX}}assets/css/site.css">
+</head>
+<body>
+    <div class="site-shell">
+        <header class="page-header">
+            <a class="crumb" href="{{ROOT_PREFIX}}index.html">政策ハブ</a>
+            <h1>{{PAGE_TITLE}}</h1>
+            <p>{{PAGE_LEAD}}</p>
+            <div class="hero__actions">
+                <a class="button button--primary" href="{{ROOT_PREFIX}}index.html">政策ハブへ戻る</a>
+                <a class="button button--ghost" href="{{ROOT_PREFIX}}policies/index.html">政策一覧へ</a>
+            </div>
+        </header>
+
+        <main class="layout-grid">
+            <section class="panel">
+                <div class="section-heading">
+                    <div>
+                        <p class="section-heading__eyebrow">{{SECTION_LABEL}}</p>
+                        <h2>{{SECTION_TITLE}}</h2>
+                    </div>
+                </div>
+                <div class="feature-grid">
+                    <article class="feature-card">
+                        <h3>{{POINT_1_TITLE}}</h3>
+                        <p>{{POINT_1_BODY}}</p>
+                    </article>
+                    <article class="feature-card">
+                        <h3>{{POINT_2_TITLE}}</h3>
+                        <p>{{POINT_2_BODY}}</p>
+                    </article>
+                    <article class="feature-card">
+                        <h3>{{POINT_3_TITLE}}</h3>
+                        <p>{{POINT_3_BODY}}</p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="section-heading">
+                    <div>
+                        <p class="section-heading__eyebrow">Next Step</p>
+                        <h2>このテンプレートの使い方</h2>
+                    </div>
+                </div>
+                <div class="feature-grid">
+                    <article class="feature-card">
+                        <h3>1. slug を決める</h3>
+                        <p>`policies/{{SLUG}}/index.html` を作成し、相対パスに合わせて `{{ROOT_PREFIX}}` と `{{ASSET_PREFIX}}` を置換します。</p>
+                    </article>
+                    <article class="feature-card">
+                        <h3>2. ハブに登録する</h3>
+                        <p>トップの `index.html` と一覧の `policies/index.html` にカードを追加します。</p>
+                    </article>
+                    <article class="feature-card">
+                        <h3>3. 直リンクを維持する</h3>
+                        <p>個別ページには必ずハブへの戻り導線を残し、単独URLでも完結する構成にします。</p>
+                    </article>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

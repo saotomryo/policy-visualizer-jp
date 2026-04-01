@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LFP蓄電池 vs 原子力：2030年までのコスト推移予測</title>
+    <meta name="description" content="太陽光・LFP蓄電池と既存原発の再稼働コストを比較する政策ページ。">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 950px;
+            margin: auto;
+            height: 400px;
+        }
+        .tab-btn { transition: all 0.3s ease; border-bottom: 3px solid transparent; }
+        .tab-btn.active { border-bottom-color: #059669; color: #065f46; font-weight: 800; }
+        .tab-btn:not(.active):hover { border-bottom-color: #d1d5db; }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .glass-panel { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+        input[type="range"] { accent-color: #059669; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased">
+
+    <div class="max-w-6xl mx-auto px-4 py-10">
+        <div class="mb-8 flex flex-wrap items-center justify-between gap-4 text-sm">
+            <div class="flex flex-wrap items-center gap-3 text-slate-500">
+                <a href="../../index.html" class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700">
+                    政策ハブへ戻る
+                </a>
+                <a href="../index.html" class="font-semibold text-emerald-700 hover:text-emerald-900">政策一覧</a>
+            </div>
+            <p class="text-xs text-slate-400">直リンク用URL: <span class="font-mono">/policies/solar-storage-vs-nuclear/</span></p>
+        </div>
+
+        <!-- Main Header -->
+        <header class="mb-16 text-center">
+            <div class="inline-block px-4 py-1.5 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold tracking-widest uppercase mb-4">
+                Energy Policy / Analysis Update
+            </div>
+            <h1 class="text-4xl md:text-6xl font-black text-slate-900 mb-6 tracking-tighter">
+                逆転するエネルギーの<span class="text-emerald-600">経済性</span>
+            </h1>
+            <p class="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+                中国発のLFP（リン酸鉄リチウム）価格破壊により、日本のエネルギー市場でも「太陽光＋蓄電池」が既存原発の再稼働コストを下回る局面が目前に迫っています。
+            </p>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex flex-wrap justify-center gap-4 md:gap-12 mb-12 border-b border-slate-200">
+            <button onclick="switchTab('lfp-tech')" id="btn-lfp-tech" class="tab-btn active px-6 py-4 text-sm md:text-base">LFP：技術と市場</button>
+            <button onclick="switchTab('cost-trend')" id="btn-cost-trend" class="tab-btn px-6 py-4 text-sm md:text-base">時系列コスト推移</button>
+            <button onclick="switchTab('sim-tool')" id="btn-sim-tool" class="tab-btn px-6 py-4 text-sm md:text-base">損益分岐シミュレーター</button>
+            <button onclick="switchTab('ref-links')" id="btn-ref-links" class="tab-btn px-6 py-4 text-sm md:text-base">参考資料</button>
+        </nav>
+
+        <!-- Sections Area -->
+        <main class="min-h-[600px]">
+            
+            <!-- Tab: LFP Technical Details -->
+            <section id="lfp-tech" class="block fade-in">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    <div class="space-y-8">
+                        <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                            <h2 class="text-2xl font-bold mb-6 text-emerald-700 flex items-center">
+                                <span class="text-3xl mr-3">💎</span> LFP（リン酸鉄）の真価
+                            </h2>
+                            <p class="leading-relaxed mb-6">
+                                <strong>LiFePO4</strong>は、正極に鉄とリンを使用するリチウムイオン電池です。かつては定置型専用とされてきましたが、中国のCATLやBYDが開発した「Cell-to-Pack（CTP）」技術により、体積あたりの容量不足を克服。今やテスラ等のEVでも主力となっています。
+                            </p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                                    <h4 class="font-bold text-emerald-900 mb-1">✅ メリット（利点）</h4>
+                                    <ul class="text-xs space-y-2 text-emerald-800">
+                                        <li>• <strong>安全性</strong>：200℃以上でも熱暴走しにくい。</li>
+                                        <li>• <strong>寿命</strong>：6,000サイクル以上の長寿命。</li>
+                                        <li>• <strong>不燃性</strong>：過充電や衝突時の発火リスクが極低。</li>
+                                        <li>• <strong>材料</strong>：鉄ベースで供給リスクが低い。</li>
+                                    </ul>
+                                </div>
+                                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                    <h4 class="font-bold text-slate-800 mb-1">⚠️ デメリット（課題）</h4>
+                                    <ul class="text-xs space-y-2 text-slate-600">
+                                        <li>• <strong>密度</strong>：三元系より重く、かさばる。</li>
+                                        <li>• <strong>低温</strong>：零下での放電効率が低下する。</li>
+                                        <li>• <strong>電圧</strong>：放電曲線が平坦で残量計測が難解。</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-indigo-900 p-8 rounded-3xl shadow-xl text-white">
+                            <h3 class="text-xl font-bold mb-4 flex items-center">
+                                <span class="text-2xl mr-2">🇨🇳</span> 中国主導の価格破壊
+                            </h3>
+                            <p class="text-sm text-indigo-100 leading-relaxed mb-4">
+                                2024年現在、中国ではLFPセルの価格が**0.4元/Wh（約8,000円/kWh）**を切る水準に突入しています。これは、日本国内の定置用蓄電池価格（工事費込で20〜30万円/kWh）と比較すると驚異的な安さです。
+                            </p>
+                            <div class="bg-indigo-800/50 p-4 rounded-lg border border-indigo-700">
+                                <p class="text-xs">
+                                    <strong>性能向上：</strong> 過去5年でエネルギー密度は約30%向上し、価格は約60%下落しました。この「デフレ技術」こそが、エネルギーシフトの真の推進力です。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                        <h2 class="text-2xl font-bold mb-8">中国市場におけるLFPの進化推移</h2>
+                        <div class="chart-container">
+                            <canvas id="chinaLfpChart"></canvas>
+                        </div>
+                        <div class="mt-8 p-5 bg-slate-50 rounded-xl border border-slate-200">
+                            <h4 class="font-bold text-slate-800 mb-2">価格と密度の「デッドヒート」</h4>
+                            <p class="text-sm text-slate-600">
+                                2020年を境に、三元系(NCM)の専売特許だったエネルギー密度領域にLFPが侵食。同時に、生産スケールメリットによる価格下落が加速しました。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Time Series Trend -->
+            <section id="cost-trend" class="hidden fade-in">
+                <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 mb-8">
+                    <h2 class="text-2xl font-bold mb-4">日本における発電コストの将来予測（LCOE）</h2>
+                    <p class="text-slate-600 mb-8 max-w-4xl">
+                        以下のグラフは、日本国内での「太陽光＋LFP蓄電池」のコスト低下予測（学習曲線に基づく）と、「既存原発の再稼働コスト」を時系列で比較したものです。安全対策費の上振れを考慮すると、2020年代後半にはコストが逆転する見込みです。
+                    </p>
+                    <div class="chart-container mb-6">
+                        <canvas id="timeSeriesChart"></canvas>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
+                        <div class="p-4 border-t-4 border-amber-500 bg-amber-50/50">
+                            <h4 class="font-bold text-amber-900 mb-1">既存原発（再稼働）</h4>
+                            <p class="text-xs text-amber-800">燃料費は安定しているが、追加の安全対策費（テロ対策・防潮堤）が1基数千億円規模で上積みされており、LCOEは緩やかに上昇傾向。</p>
+                        </div>
+                        <div class="p-4 border-t-4 border-emerald-500 bg-emerald-50/50">
+                            <h4 class="font-bold text-emerald-900 mb-1">太陽光 + LFP蓄電池</h4>
+                            <p class="text-xs text-emerald-800">パネルとLFPの量産効果により毎年数％のコストダウンが継続。夜間のバックアップを含めても、単独の原子力に匹敵する安さに到達します。</p>
+                        </div>
+                        <div class="p-4 border-t-4 border-indigo-600 bg-indigo-50/50">
+                            <h4 class="font-bold text-indigo-900 mb-1">クロスオーバー（逆転点）</h4>
+                            <p class="text-xs text-indigo-800">2026年〜2028年頃に、日本国内の平均的な再稼働コストを再生可能エネルギー＋蓄電池が下回ると予測されています。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Simulator -->
+            <section id="sim-tool" class="hidden fade-in">
+                <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                    <h2 class="text-2xl font-bold mb-8 text-center">コスト分岐シミュレーター</h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                        <div class="space-y-10">
+                            <div>
+                                <div class="flex justify-between mb-4">
+                                    <label class="font-bold text-slate-700">LFP蓄電池システム単価 (円/kWh)</label>
+                                    <span id="val-lfp" class="bg-emerald-600 text-white px-3 py-1 rounded font-mono font-bold">45,000円</span>
+                                </div>
+                                <input type="range" id="sim-lfp" min="10000" max="120000" step="5000" value="45000" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" oninput="runSim()">
+                                <p class="text-[11px] text-slate-400 mt-2">※日本での産業用設置コスト。中国市場はすでにこの半値以下。</p>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-4">
+                                    <label class="font-bold text-slate-700">原発追加安全対策費 (1基あたり)</label>
+                                    <span id="val-nuke" class="bg-amber-600 text-white px-3 py-1 rounded font-mono font-bold">4,000億円</span>
+                                </div>
+                                <input type="range" id="sim-nuke" min="1000" max="15000" step="500" value="4000" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" oninput="runSim()">
+                                <p class="text-[11px] text-slate-400 mt-2">※再稼働のための追加投資額。平均は3,000億〜5,000億円。</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900 rounded-3xl p-10 text-white relative overflow-hidden shadow-2xl">
+                            <div class="absolute top-0 right-0 p-4 opacity-10 text-6xl">⚡</div>
+                            <h3 class="text-slate-400 font-bold text-xs mb-8 uppercase tracking-widest">推定発電原価比較 (円/kWh)</h3>
+                            
+                            <div class="flex justify-between items-end gap-6 mb-10">
+                                <div class="flex-1">
+                                    <p class="text-xs text-emerald-400 mb-2">太陽光+LFP蓄電池</p>
+                                    <p id="out-solar" class="text-5xl font-black font-mono">15.5</p>
+                                </div>
+                                <div class="text-3xl font-bold text-slate-700">VS</div>
+                                <div class="flex-1 text-right">
+                                    <p class="text-xs text-amber-400 mb-2">既存原発（再稼働）</p>
+                                    <p id="out-nuke" class="text-5xl font-black font-mono">11.8</p>
+                                </div>
+                            </div>
+
+                            <div id="result-badge" class="w-full py-4 text-center rounded-xl font-bold text-lg border-2 border-slate-700 bg-slate-800/50 transition-all">
+                                計算中...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: References -->
+            <section id="ref-links" class="hidden fade-in">
+                <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                    <h2 class="text-2xl font-bold mb-8 flex items-center">
+                        <span class="text-3xl mr-3">📚</span> 信頼できるソースとデータ
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <a href="https://www.youtube.com/watch?v=g_4onhELIkI" target="_blank" class="block p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:border-emerald-300 transition group">
+                            <p class="text-xs text-slate-400 mb-1">検証の起点：動画資料</p>
+                            <h4 class="font-bold text-slate-800 group-hover:text-emerald-700">太陽光発電+蓄電池の方が本当にコスト優位性があるか？</h4>
+                            <p class="text-xs text-slate-500 mt-2">議論のベースとなった経済性検証動画。</p>
+                        </a>
+                        <a href="https://www.lazard.com/research-insights/levelized-cost-of-energyplus/" target="_blank" class="block p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:border-emerald-300 transition group">
+                            <p class="text-xs text-slate-400 mb-1">国際指標：Lazard</p>
+                            <h4 class="font-bold text-slate-800 group-hover:text-emerald-700">LCOE & LCOS Analysis 2024</h4>
+                            <p class="text-xs text-slate-500 mt-2">世界で最も参照される発電コスト分析の年次報告書。</p>
+                        </a>
+                        <a href="https://www.enecho.meti.go.jp/committee/council/basic_policy_subcommittee/mitoshi/cost_wg/2024/01.html" target="_blank" class="block p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:border-emerald-300 transition group">
+                            <p class="text-xs text-slate-400 mb-1">政府統計：資源エネルギー庁</p>
+                            <h4 class="font-bold text-slate-800 group-hover:text-emerald-700">発電コスト検証ワーキンググループ（2024）</h4>
+                            <p class="text-xs text-slate-500 mt-2">2024年の検証資料と、2021年検証結果の参考資料を確認できる公式ページ。</p>
+                        </a>
+                        <a href="https://www.iea.org/reports/the-role-of-critical-minerals-in-clean-energy-transitions" target="_blank" class="block p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:border-emerald-300 transition group">
+                            <p class="text-xs text-slate-400 mb-1">国際機関：IEA</p>
+                            <h4 class="font-bold text-slate-800 group-hover:text-emerald-700">The Role of LFP in Energy Storage</h4>
+                            <p class="text-xs text-slate-500 mt-2">国際エネルギー機関によるLFPの重要性とコスト予測。</p>
+                        </a>
+                    </div>
+                    <div class="mt-12 p-8 bg-emerald-50 rounded-2xl text-sm border border-emerald-100">
+                        <p class="font-bold text-emerald-900 mb-2">💡 総括：なぜ時系列で見る必要があるのか？</p>
+                        <p class="text-emerald-800 leading-relaxed">
+                            原子力発電は、建設や対策に10年単位の時間がかかり、その間に安全基準の変化でコストが増大する「インフレ型」の電源です。対して太陽光と蓄電池（特にLFP）は、数ヶ月単位で設置が可能であり、技術革新が即座に価格へ反映される「デフレ型」の電源です。今この瞬間のコストだけでなく、<strong>「稼働を開始する数年後にどちらが安くなっているか」</strong>という視点が、将来の投資判断には不可欠です。
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <section class="mt-12 rounded-3xl border border-slate-200 bg-white p-8">
+            <div class="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Site Navigation</p>
+                    <h2 class="mt-2 text-2xl font-bold text-slate-900">このページは個別URLでも閲覧できます</h2>
+                    <p class="mt-3 max-w-3xl text-sm leading-relaxed text-slate-600">
+                        この政策ページはハブ経由で辿る構成と、`policies/solar-storage-vs-nuclear/index.html` への直接アクセスの両方を前提に配置しています。
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <a href="../../index.html" class="rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700">ハブへ戻る</a>
+                    <a href="../index.html" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-300">政策一覧を見る</a>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        let charts = {};
+
+        function switchTab(id) {
+            ['lfp-tech', 'cost-trend', 'sim-tool', 'ref-links'].forEach(sectionId => {
+                document.getElementById(sectionId).classList.add('hidden');
+                document.getElementById('btn-' + sectionId).classList.remove('active');
+            });
+            document.getElementById(id).classList.remove('hidden');
+            document.getElementById('btn-' + id).classList.add('active');
+
+            if(id === 'lfp-tech') initChinaChart();
+            if(id === 'cost-trend') initTimeSeriesChart();
+            if(id === 'sim-tool') runSim();
+        }
+
+        function initChinaChart() {
+            if(charts.china) return;
+            const ctx = document.getElementById('chinaLfpChart').getContext('2d');
+            charts.china = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['2019', '2020', '2021', '2022', '2023', '2024'],
+                    datasets: [
+                        {
+                            label: 'LFPセル価格 (USD/kWh)',
+                            data: [160, 105, 85, 110, 75, 45],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: '平均エネルギー密度 (Wh/kg)',
+                            data: [135, 145, 160, 175, 190, 205],
+                            borderColor: '#3b82f6',
+                            borderDash: [5, 5],
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: {
+                        y: { title: { display: true, text: '価格 (USD)' } },
+                        y1: { 
+                            position: 'right', 
+                            title: { display: true, text: '密度 (Wh/kg)' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initTimeSeriesChart() {
+            if(charts.time) return;
+            const ctx = document.getElementById('timeSeriesChart').getContext('2d');
+            charts.time = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['2020', '2022', '2024', '2026', '2028', '2030'],
+                    datasets: [
+                        {
+                            label: '太陽光 + LFP蓄電池 (日本国内LCOE予測)',
+                            data: [25.0, 19.5, 15.0, 12.5, 10.8, 9.5],
+                            borderColor: '#10b981',
+                            borderWidth: 4,
+                            pointRadius: 5,
+                            pointBackgroundColor: '#10b981',
+                            tension: 0.2
+                        },
+                        {
+                            label: '既存原発 (再稼働＋安全対策費LCOE)',
+                            data: [10.5, 11.2, 11.8, 12.2, 12.6, 13.0],
+                            borderColor: '#f59e0b',
+                            borderWidth: 3,
+                            borderDash: [5, 5],
+                            pointRadius: 4,
+                            pointBackgroundColor: '#f59e0b',
+                            tension: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} 円/kWh`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: false, 
+                            title: { display: true, text: '均等化発電原価 (円/kWh)' },
+                            suggestedMin: 5
+                        }
+                    }
+                }
+            });
+        }
+
+        function runSim() {
+            const lfpPrice = parseInt(document.getElementById('sim-lfp').value);
+            const nukeSafety = parseInt(document.getElementById('sim-nuke').value);
+
+            document.getElementById('val-lfp').innerText = lfpPrice.toLocaleString() + '円';
+            document.getElementById('val-nuke').innerText = nukeSafety.toLocaleString() + '億円';
+
+            // Logic Solar + LFP
+            const solarLcoe = 7.0; // Utility solar Japan
+            // LCOS calculation: Price / (LifeCycles * Depth * Eff)
+            const lcos = lfpPrice / (6000 * 0.9 * 0.9); 
+            const totalSolar = Math.round((solarLcoe + lcos) * 10) / 10;
+
+            // Logic Nuke
+            const nukeFixed = 8.0; // O&M, Fuel, Back-end (METI based)
+            // Safety investment amortized (1GW reactor, 70% cap, 20yr remaining)
+            const nukeCap = (nukeSafety * 100000000) / 122000000000;
+            const totalNuke = Math.round((nukeFixed + nukeCap) * 10) / 10;
+
+            document.getElementById('out-solar').innerText = totalSolar.toFixed(1);
+            document.getElementById('out-nuke').innerText = totalNuke.toFixed(1);
+
+            const badge = document.getElementById('result-badge');
+            if (totalSolar < totalNuke) {
+                badge.innerText = "太陽光 + LFP の経済的勝利 🌿";
+                badge.className = "w-full py-4 text-center rounded-xl font-bold text-lg border-2 border-emerald-500 bg-emerald-500/20 text-emerald-300 transition-all";
+            } else {
+                badge.innerText = "現在はまだ 原子力が低コスト ⚛️";
+                badge.className = "w-full py-4 text-center rounded-xl font-bold text-lg border-2 border-amber-500 bg-amber-500/20 text-amber-300 transition-all";
+            }
+        }
+
+        window.onload = () => {
+            initChinaChart();
+            runSim();
+        };
+    </script>
+</body>
+</html>
