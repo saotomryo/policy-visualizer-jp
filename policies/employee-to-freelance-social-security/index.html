@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会社員から個人事業主へ：社会保障リスク分析ダッシュボード</title>
+    <meta name="description" content="会社員から個人事業主へ移行したときの社会保障リスクと対策を比較するダッシュボード。">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .flip-card {
+            perspective: 1000px;
+        }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .flip-card:hover .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+        .flip-card-front, .flip-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+        }
+        .flip-card-back {
+            transform: rotateY(180deg);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body {
+            background-color: #fafaf9;
+            color: #292524;
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+        }
+        .top-tab {
+            transition: all 0.2s ease;
+        }
+        .top-tab.active {
+            background: #ea580c;
+            color: white;
+            box-shadow: 0 10px 30px rgba(234, 88, 12, 0.2);
+        }
+        .result-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,247,237,0.95));
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-8 flex flex-wrap items-center justify-between gap-4 text-sm">
+            <div class="flex flex-wrap items-center gap-3 text-stone-500">
+                <a href="../../index.html" class="inline-flex items-center rounded-full border border-stone-200 bg-white px-4 py-2 font-semibold text-stone-700 transition hover:border-orange-300 hover:text-orange-700">
+                    政策ハブへ戻る
+                </a>
+                <a href="../index.html" class="font-semibold text-orange-700 hover:text-orange-900">政策一覧</a>
+            </div>
+            <p class="text-xs text-stone-400">直リンク用URL: <span class="font-mono">/policies/employee-to-freelance-social-security/</span></p>
+        </div>
+
+        <!-- Chosen Palette: Warm Neutrals (Stone) with Blue (Employee safety) and Orange (Freelance risk) accents -->
+        <!-- Application Structure Plan: The SPA is designed as an interactive "Risk Dashboard". It starts with a high-level toggle comparison to immediately show the "shock" of the transition. Then, it dives into specific areas (Health Insurance/Income Loss and Pension Gap) using visual charts and bars, as these are the most impactful data points. Finally, it provides an actionable "Countermeasures" section using flip cards to encourage active exploration of solutions. This structure moves the user logically from Problem Awareness -> Detailed Analysis -> Solution. -->
+        <!-- Visualization & Content Choices: Summary Table -> Interactive Toggle Cards -> Goal: Compare -> Justification: Allows user to switch perspectives and see the stark contrast dynamically. Pension Gap -> Stacked Bar Chart (Chart.js) -> Goal: Compare/Inform -> Justification: Visually demonstrates the loss of the "2nd tier" (welfare pension) clearly. Income Loss -> HTML/CSS Progress/Bar Visual -> Goal: Inform/Shock -> Justification: Visually representing "0%" sick pay hits harder than just text. Countermeasures -> Flip Cards (HTML/CSS) -> Goal: Organize/Engage -> Justification: Keeps the UI clean and encourages interaction to learn about self-defense tactics. NO SVG/Mermaid used. -->
+        <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            
+            <header class="text-center mb-16">
+                <div class="inline-block bg-stone-200 text-stone-700 px-4 py-1 rounded-full text-sm font-bold tracking-wider mb-4">SOCIAL SECURITY TRANSITION</div>
+                <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight text-stone-900 mb-6">会社員から個人事業主へ<br><span class="text-orange-600">社会保障の変動リスク</span></h1>
+                <p class="text-lg text-stone-600 max-w-3xl mx-auto leading-relaxed">
+                    会社員（第2号被保険者）から個人事業主（第1号被保険者）への転身は、働き方の自由を得る一方で、社会保障制度が「手厚いパッケージ」から「最小限のベース」へと移行することを意味します。本ダッシュボードでは、その金銭的負担の変化と、見落としがちな補償の劣化リスクを視覚的に解説します。
+                </p>
+                <div class="mt-6 flex flex-wrap justify-center gap-3">
+                    <a href="https://www.mhlw.go.jp/stf/houdou/0000190457_00024.html" target="_blank" class="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-bold text-stone-700 ring-1 ring-stone-200 transition hover:ring-orange-300">
+                        関連する厚労省通知
+                    </a>
+                </div>
+            </header>
+
+            <div class="mb-10 flex justify-center">
+                <div class="inline-flex rounded-2xl bg-stone-200 p-1">
+                    <button type="button" id="page-tab-analysis" class="top-tab active rounded-xl px-5 py-3 text-sm font-bold text-stone-700">解説ダッシュボード</button>
+                    <button type="button" id="page-tab-simulator" class="top-tab rounded-xl px-5 py-3 text-sm font-bold text-stone-600">条件シミュレーター</button>
+                </div>
+            </div>
+
+            <div id="page-mode-analysis">
+            <section class="mb-20">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-stone-800 mb-4">1. 制度の全体比較シミュレーター</h2>
+                    <p class="text-stone-600 max-w-2xl mx-auto">
+                        現在の「会社員」と、独立後の「個人事業主」で、社会保障の各項目がどのように変化するかを比較します。上のボタンを切り替えて、リスクの違いを確認してください。
+                    </p>
+                </div>
+
+                <div class="flex justify-center mb-8">
+                    <div class="bg-stone-200 p-1 rounded-xl inline-flex relative shadow-inner">
+                        <button id="btn-employee" class="relative w-40 py-3 text-sm font-bold rounded-lg transition-all duration-300 z-10 bg-white text-blue-700 shadow-sm">🏢 会社員</button>
+                        <button id="btn-freelance" class="relative w-40 py-3 text-sm font-bold rounded-lg transition-all duration-300 z-10 text-stone-500 hover:text-stone-700">💼 個人事業主</button>
+                    </div>
+                </div>
+
+                <div id="comparison-dashboard" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 transition-all duration-500">
+                    
+                    <div class="bg-white rounded-2xl p-6 shadow-md border-t-4 border-blue-500 status-card">
+                        <div class="text-3xl mb-4">💰</div>
+                        <h3 class="text-lg font-bold text-stone-800 mb-2">保険料の負担</h3>
+                        <p id="stat-burden" class="text-xl font-extrabold text-blue-600 mb-2">会社と折半 (実質50%)</p>
+                        <p id="desc-burden" class="text-sm text-stone-500">会社が半分負担するため、給与天引きで済んでいました。</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-md border-t-4 border-blue-500 status-card">
+                        <div class="text-3xl mb-4">👨‍👩‍👧‍👦</div>
+                        <h3 class="text-lg font-bold text-stone-800 mb-2">家族の扶養</h3>
+                        <p id="stat-dependent" class="text-xl font-extrabold text-blue-600 mb-2">保険料は無料</p>
+                        <p id="desc-dependent" class="text-sm text-stone-500">専業主婦(夫)や子供の分の健康保険料はかかりません。</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-md border-t-4 border-blue-500 status-card">
+                        <div class="text-3xl mb-4">🏥</div>
+                        <h3 class="text-lg font-bold text-stone-800 mb-2">病気休業補償</h3>
+                        <p id="stat-sick" class="text-xl font-extrabold text-blue-600 mb-2">傷病手当金 (給与の約2/3)</p>
+                        <p id="desc-sick" class="text-sm text-stone-500">病気で長期間休んでも、最長1年6ヶ月の所得保障があります。</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-md border-t-4 border-blue-500 status-card">
+                        <div class="text-3xl mb-4">👶</div>
+                        <h3 class="text-lg font-bold text-stone-800 mb-2">出産補償</h3>
+                        <p id="stat-maternity" class="text-xl font-extrabold text-blue-600 mb-2">出産手当金あり</p>
+                        <p id="desc-maternity" class="text-sm text-stone-500">出産のための休業期間中も一定の補償が受けられます。</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-md border-t-4 border-blue-500 status-card">
+                        <div class="text-3xl mb-4">👴</div>
+                        <h3 class="text-lg font-bold text-stone-800 mb-2">将来の年金</h3>
+                        <p id="stat-pension" class="text-xl font-extrabold text-blue-600 mb-2">2階建て (手厚い)</p>
+                        <p id="desc-pension" class="text-sm text-stone-500">基礎年金に加えて、報酬に比例した厚生年金が上乗せされます。</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-md border-t-4 border-blue-500 status-card">
+                        <div class="text-3xl mb-4">🛡️</div>
+                        <h3 class="text-lg font-bold text-stone-800 mb-2">障害・遺族補償</h3>
+                        <p id="stat-disability" class="text-xl font-extrabold text-blue-600 mb-2">厚生年金による加算あり</p>
+                        <p id="desc-disability" class="text-sm text-stone-500">軽度の障害（3級など）でも給付があり、遺族への補償も厚いです。</p>
+                    </div>
+
+                </div>
+            </section>
+
+            <section class="mb-20 bg-white rounded-3xl p-8 shadow-sm border border-stone-200">
+                <div class="flex flex-col lg:flex-row gap-12 items-center">
+                    <div class="lg:w-1/2">
+                        <div class="inline-flex items-center justify-center p-3 bg-red-100 text-red-600 rounded-xl mb-4">
+                            <span class="text-2xl font-bold">⚠️</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-stone-800 mb-4">2. 最大のリスク：所得補償の「完全消滅」</h2>
+                        <p class="text-stone-600 mb-6 leading-relaxed">
+                            国民健康保険（国保）への移行において、医療費の3割負担は変わりません。しかし、最も危険なのは<strong>「働けなくなった時の所得保障」がゼロになること</strong>です。会社員時代に守られていたセーフティネットが完全に外れる状態を理解する必要があります。
+                        </p>
+                        
+                        <div class="bg-stone-50 rounded-xl p-5 border border-stone-200 mb-6">
+                            <h4 class="font-bold text-stone-800 mb-3">病気やケガで休業した場合の月収推移イメージ</h4>
+                            
+                            <div class="mb-4">
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="font-bold text-blue-700">会社員の場合 (傷病手当金)</span>
+                                    <span class="text-blue-700 font-bold">約66%</span>
+                                </div>
+                                <div class="w-full bg-stone-200 rounded-full h-4">
+                                    <div class="bg-blue-500 h-4 rounded-full" style="width: 66%"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="font-bold text-orange-600">個人事業主の場合 (国保)</span>
+                                    <span class="text-orange-600 font-bold">0% (収入ゼロ)</span>
+                                </div>
+                                <div class="w-full bg-stone-200 rounded-full h-4 relative overflow-hidden">
+                                    <div class="bg-orange-500 h-4 rounded-full absolute" style="width: 2%"></div>
+                                </div>
+                                <p class="text-xs text-stone-500 mt-2">※休業期間中も国保の保険料支払いは継続します。</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="lg:w-1/2 w-full">
+                        <div class="bg-orange-50 rounded-2xl p-6 border border-orange-100">
+                            <h3 class="text-lg font-bold text-orange-800 mb-4">国保移行による金銭的負担増の理由</h3>
+                            <ul class="space-y-4">
+                                <li class="flex items-start">
+                                    <span class="bg-orange-200 text-orange-800 rounded-full w-6 h-6 flex items-center justify-center font-bold mr-3 shrink-0">1</span>
+                                    <div>
+                                        <strong class="block text-stone-800">全額自己負担</strong>
+                                        <span class="text-sm text-stone-600">会社との折半がなくなるため、同じ所得でも実質的な支払額は倍増に近い感覚に。</span>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="bg-orange-200 text-orange-800 rounded-full w-6 h-6 flex items-center justify-center font-bold mr-3 shrink-0">2</span>
+                                    <div>
+                                        <strong class="block text-stone-800">扶養制度の消失</strong>
+                                        <span class="text-sm text-stone-600">家族がいる場合、会社員なら無料だった家族分も、国保では「均等割」として人数分加算。</span>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="bg-orange-200 text-orange-800 rounded-full w-6 h-6 flex items-center justify-center font-bold mr-3 shrink-0">3</span>
+                                    <div>
+                                        <strong class="block text-stone-800">出産手当金の欠如</strong>
+                                        <span class="text-sm text-stone-600">出産による休業期間の補償も原則として存在しません。</span>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="mb-20">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-stone-800 mb-4">3. 年金の格差：消滅する「2階部分」</h2>
+                    <p class="text-stone-600 max-w-2xl mx-auto">
+                        日本の年金は「2階建て」ですが、個人事業主になると報酬比例の厚生年金（2階部分）がなくなり、受給額が大幅に低下します。以下のグラフでその格差を確認してください。
+                    </p>
+                </div>
+
+                <div class="bg-white rounded-3xl p-6 lg:p-10 shadow-sm border border-stone-200">
+                    <div class="flex flex-col lg:flex-row gap-8 items-center">
+                        <div class="lg:w-2/3 w-full">
+                            <div class="chart-container">
+                                <canvas id="pensionChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="lg:w-1/3 w-full space-y-6">
+                            <div class="p-4 bg-stone-50 rounded-xl border-l-4 border-blue-500">
+                                <h4 class="font-bold text-stone-800">会社員 (月収30万・40年勤務)</h4>
+                                <p class="text-2xl font-extrabold text-blue-600 my-1">約 150,000<span class="text-sm text-stone-500 font-normal"> 円/月</span></p>
+                                <p class="text-xs text-stone-500">基礎年金 ＋ 厚生年金</p>
+                            </div>
+                            <div class="p-4 bg-stone-50 rounded-xl border-l-4 border-orange-500">
+                                <h4 class="font-bold text-stone-800">個人事業主 (40年満額納付)</h4>
+                                <p class="text-2xl font-extrabold text-orange-600 my-1">約 68,000<span class="text-sm text-stone-500 font-normal"> 円/月</span></p>
+                                <p class="text-xs text-stone-500">基礎年金のみ (2024年度価格)</p>
+                            </div>
+                            <div class="p-4 bg-red-50 rounded-xl border border-red-100">
+                                <h4 class="font-bold text-red-800 flex items-center gap-2"><span>📉</span> 受給額の格差</h4>
+                                <p class="text-xl font-bold text-red-600">月に約9万円の差</p>
+                                <p class="text-sm text-red-700 mt-2">さらに、障害等級3級の保障や手厚い遺族年金などの機能も弱体化します。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <div class="text-center mb-10">
+                    <div class="inline-block bg-teal-100 text-teal-800 px-4 py-1 rounded-full text-sm font-bold tracking-wider mb-4">ACTION PLAN</div>
+                    <h2 class="text-2xl font-bold text-stone-800 mb-4">4. 負担増と劣化リスクへの対策</h2>
+                    <p class="text-stone-600 max-w-2xl mx-auto">
+                        個人事業主は、失われた「手厚いパッケージ」を自らの手で再構築（自衛）する必要があります。以下のカードにカーソルを合わせる（タップする）と、具体的な対策制度の詳細が表示されます。
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    
+                    <div class="flip-card h-64 cursor-pointer">
+                        <div class="flip-card-inner">
+                            <div class="flip-card-front bg-teal-50 border border-teal-100 shadow-sm">
+                                <div class="text-4xl mb-4">🔄</div>
+                                <h3 class="text-xl font-bold text-teal-900 mb-2">健康保険の任意継続</h3>
+                                <p class="text-teal-700 text-sm">退職直後の負担軽減策</p>
+                                <div class="mt-4 px-3 py-1 bg-teal-200 text-teal-800 text-xs rounded-full">詳細を見る</div>
+                            </div>
+                            <div class="flip-card-back bg-teal-600 text-white shadow-lg">
+                                <h3 class="text-lg font-bold mb-3 border-b border-teal-400 pb-2 w-full">任意継続のメリット</h3>
+                                <p class="text-sm text-teal-50 text-left w-full leading-relaxed">
+                                    退職後2年間は、元の会社の健康保険に継続加入できます。<br><br>特に扶養家族が多い場合、人数分加算される国保よりも保険料が大幅に安くなるケースが多いです。退職時に比較計算が必須です。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flip-card h-64 cursor-pointer">
+                        <div class="flip-card-inner">
+                            <div class="flip-card-front bg-teal-50 border border-teal-100 shadow-sm">
+                                <div class="text-4xl mb-4">📈</div>
+                                <h3 class="text-xl font-bold text-teal-900 mb-2">iDeCo (個人型確定拠出年金)</h3>
+                                <p class="text-teal-700 text-sm">消えた「2階部分」を自作</p>
+                                <div class="mt-4 px-3 py-1 bg-teal-200 text-teal-800 text-xs rounded-full">詳細を見る</div>
+                            </div>
+                            <div class="flip-card-back bg-teal-600 text-white shadow-lg">
+                                <h3 class="text-lg font-bold mb-3 border-b border-teal-400 pb-2 w-full">iDeCoのメリット</h3>
+                                <p class="text-sm text-teal-50 text-left w-full leading-relaxed">
+                                    月最大6.8万円まで掛金を拠出可能。最大の魅力は<strong>掛金が全額所得控除</strong>になること。<br><br>節税しながら将来の年金資産を投資信託などで運用し、自分自身の「年金の2階部分」を作ることができます。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flip-card h-64 cursor-pointer">
+                        <div class="flip-card-inner">
+                            <div class="flip-card-front bg-teal-50 border border-teal-100 shadow-sm">
+                                <div class="text-4xl mb-4">🏢</div>
+                                <h3 class="text-xl font-bold text-teal-900 mb-2">小規模企業共済</h3>
+                                <p class="text-teal-700 text-sm">個人事業主の「退職金」</p>
+                                <div class="mt-4 px-3 py-1 bg-teal-200 text-teal-800 text-xs rounded-full">詳細を見る</div>
+                            </div>
+                            <div class="flip-card-back bg-teal-600 text-white shadow-lg">
+                                <h3 class="text-lg font-bold mb-3 border-b border-teal-400 pb-2 w-full">共済のメリット</h3>
+                                <p class="text-sm text-teal-50 text-left w-full leading-relaxed">
+                                    国の機関が運営する、経営者のための退職金制度です。<br><br>掛金は月1,000円〜7万円。これも<strong>全額所得控除</strong>の対象となり、高い節税効果を得ながら、廃業時や引退時の資金を準備できます。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flip-card h-64 cursor-pointer">
+                        <div class="flip-card-inner">
+                            <div class="flip-card-front bg-teal-50 border border-teal-100 shadow-sm">
+                                <div class="text-4xl mb-4">☂️</div>
+                                <h3 class="text-xl font-bold text-teal-900 mb-2">所得補償保険</h3>
+                                <p class="text-teal-700 text-sm">傷病手当金ゼロへの備え</p>
+                                <div class="mt-4 px-3 py-1 bg-teal-200 text-teal-800 text-xs rounded-full">詳細を見る</div>
+                            </div>
+                            <div class="flip-card-back bg-teal-600 text-white shadow-lg">
+                                <h3 class="text-lg font-bold mb-3 border-b border-teal-400 pb-2 w-full">民間保険の活用</h3>
+                                <p class="text-sm text-teal-50 text-left w-full leading-relaxed">
+                                    国保には「傷病手当金」がありません。<br><br>病気やケガで働けなくなった期間の収入減をカバーするため、民間の「就業不能保険」や「所得補償保険」への加入検討が強く推奨されます。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flip-card h-64 cursor-pointer sm:col-span-2 lg:col-span-2">
+                        <div class="flip-card-inner">
+                            <div class="flip-card-front bg-stone-100 border border-stone-200 shadow-sm">
+                                <div class="text-4xl mb-4">🏛️</div>
+                                <h3 class="text-xl font-bold text-stone-800 mb-2">国民年金基金 / 付加年金</h3>
+                                <p class="text-stone-600 text-sm">公的な終身年金の上乗せ</p>
+                                <div class="mt-2 px-3 py-1 bg-stone-200 text-stone-700 text-xs rounded-full">詳細を見る</div>
+                            </div>
+                            <div class="flip-card-back bg-stone-700 text-white shadow-lg">
+                                <h3 class="text-lg font-bold mb-3 border-b border-stone-500 pb-2 w-full">公的制度の活用</h3>
+                                <p class="text-sm text-stone-200 text-left w-full leading-relaxed">
+                                    <strong>付加年金:</strong> 月額400円を上乗せ納付するだけで、将来の年金が確実にお得に増える制度です。<br>
+                                    <strong>国民年金基金:</strong> 自営業者のために創設された公的な年金制度で、終身年金を確定額で増やせます（iDeCoと合算で上限枠あり）。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <footer class="mt-24 text-center border-t border-stone-200 pt-8 pb-12">
+                <h3 class="text-xl font-bold text-stone-800 mb-4">結論まとめ</h3>
+                <p class="text-stone-600 max-w-3xl mx-auto leading-relaxed">
+                    単に「手取り額」だけで比較してはいけません。「家族の保険料負担増」と「将来の年金・休業時の補償額の消失」を含めると、実質的な生涯コスト・リスクは<strong>数百万円〜数千万円単位で増大</strong>します。独立時は売上目標の策定と同時に、上記対策を用いた社会保障の再構築設計が不可欠です。
+                </p>
+            </footer>
+            </div>
+
+            <section id="page-mode-simulator" class="hidden mb-12">
+                <div class="mb-8 rounded-3xl border border-orange-100 bg-orange-50 p-6">
+                    <p class="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-orange-700">Tokyo Model</p>
+                    <h2 class="text-2xl font-bold text-stone-900">年収・家族条件シミュレーター</h2>
+                    <p class="mt-3 max-w-4xl text-sm leading-relaxed text-stone-600">
+                        協会けんぽ東京支部の2026年度料率と、渋谷区の2026年度国民健康保険料率をベースにした概算モデルです。
+                        実際の国保料は自治体・軽減措置・所得区分で変わるため、ここでは「東京で独立したときのざっくりした差」を見る用途に絞っています。
+                    </p>
+                </div>
+
+                <div class="grid gap-8 lg:grid-cols-[1.1fr,0.9fr]">
+                    <section class="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+                        <h3 class="mb-6 text-xl font-bold text-stone-800">条件を入力</h3>
+                        <div class="grid gap-6 md:grid-cols-2">
+                            <label class="block">
+                                <span class="mb-2 block text-sm font-bold text-stone-700">年収・事業所得の目安</span>
+                                <input id="sim-income" type="number" min="1000000" max="30000000" step="100000" value="6000000" class="w-full rounded-xl border border-stone-300 px-4 py-3 text-stone-900 focus:border-orange-400 focus:outline-none">
+                                <span class="mt-2 block text-xs text-stone-500">会社員時代の年収と、独立後の年間所得を同額とみなす簡易モデルです。</span>
+                            </label>
+
+                            <label class="block">
+                                <span class="mb-2 block text-sm font-bold text-stone-700">本人の年齢</span>
+                                <input id="sim-age" type="number" min="20" max="74" step="1" value="38" class="w-full rounded-xl border border-stone-300 px-4 py-3 text-stone-900 focus:border-orange-400 focus:outline-none">
+                                <span class="mt-2 block text-xs text-stone-500">40〜64歳は介護保険料・介護分を加算します。</span>
+                            </label>
+
+                            <label class="block">
+                                <span class="mb-2 block text-sm font-bold text-stone-700">配偶者</span>
+                                <select id="sim-spouse" class="w-full rounded-xl border border-stone-300 px-4 py-3 text-stone-900 focus:border-orange-400 focus:outline-none">
+                                    <option value="none">なし</option>
+                                    <option value="under40">あり（40歳未満）</option>
+                                    <option value="40to64">あり（40〜64歳）</option>
+                                    <option value="65plus">あり（65歳以上）</option>
+                                </select>
+                                <span class="mt-2 block text-xs text-stone-500">協会けんぽでは扶養想定、国保では世帯人数として反映します。</span>
+                            </label>
+
+                            <label class="block">
+                                <span class="mb-2 block text-sm font-bold text-stone-700">子どもの人数</span>
+                                <input id="sim-children" type="number" min="0" max="6" step="1" value="2" class="w-full rounded-xl border border-stone-300 px-4 py-3 text-stone-900 focus:border-orange-400 focus:outline-none">
+                                <span class="mt-2 block text-xs text-stone-500">国保は人数分の均等割を見込みます。未就学児軽減などは未反映です。</span>
+                            </label>
+
+                            <label class="block">
+                                <span class="mb-2 block text-sm font-bold text-stone-700">厚生年金の加入年数</span>
+                                <input id="sim-pension-years" type="number" min="1" max="45" step="1" value="20" class="w-full rounded-xl border border-stone-300 px-4 py-3 text-stone-900 focus:border-orange-400 focus:outline-none">
+                                <span class="mt-2 block text-xs text-stone-500">会社員として厚生年金に加入していた年数を入れます。</span>
+                            </label>
+
+                            <label class="block">
+                                <span class="mb-2 block text-sm font-bold text-stone-700">過去年収の増加係数</span>
+                                <input id="sim-growth-factor" type="number" min="0.5" max="1.5" step="0.05" value="0.85" class="w-full rounded-xl border border-stone-300 px-4 py-3 text-stone-900 focus:border-orange-400 focus:outline-none">
+                                <span class="mt-2 block text-xs text-stone-500">過去の平均年収を「現在年収 × 係数」で近似します。右肩上がりなら 0.7〜0.9 目安です。</span>
+                            </label>
+
+                            <label class="block md:col-span-2">
+                                <span class="mb-2 block text-sm font-bold text-stone-700">病気やケガで働けない期間</span>
+                                <input id="sim-leave" type="range" min="1" max="12" step="1" value="3" class="w-full accent-orange-600">
+                                <div class="mt-2 flex items-center justify-between text-xs text-stone-500">
+                                    <span>1か月</span>
+                                    <span id="sim-leave-label" class="font-bold text-orange-700">3か月</span>
+                                    <span>12か月</span>
+                                </div>
+                            </label>
+                        </div>
+                    </section>
+
+                    <section class="space-y-4">
+                        <div class="result-card rounded-3xl border border-orange-100 p-6 shadow-sm">
+                            <p class="text-xs font-bold uppercase tracking-[0.2em] text-orange-700">年間の保険料負担</p>
+                            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                                <div class="rounded-2xl bg-white p-4 ring-1 ring-blue-100">
+                                    <p class="text-sm font-bold text-blue-700">協会けんぽ 東京</p>
+                                    <p id="out-employee-health" class="mt-2 text-3xl font-black text-stone-900">0円</p>
+                                    <p class="mt-1 text-xs text-stone-500">本人負担のみ。扶養家族の追加保険料なし。</p>
+                                </div>
+                                <div class="rounded-2xl bg-white p-4 ring-1 ring-orange-100">
+                                    <p class="text-sm font-bold text-orange-700">国保 東京モデル</p>
+                                    <p id="out-freelance-health" class="mt-2 text-3xl font-black text-stone-900">0円</p>
+                                    <p class="mt-1 text-xs text-stone-500">渋谷区2026年度料率ベースの概算。</p>
+                                </div>
+                            </div>
+                            <div class="mt-4 rounded-2xl bg-stone-900 p-5 text-white">
+                                <p class="text-sm text-stone-400">独立後の年間差額</p>
+                                <p id="out-health-gap" class="mt-2 text-4xl font-black">0円</p>
+                            </div>
+                        </div>
+
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div class="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+                                <p id="out-sick-label" class="text-sm font-bold text-stone-700">病気休業3か月時の補償差</p>
+                                <p id="out-sick-gap" class="mt-3 text-3xl font-black text-red-600">0円</p>
+                                <p class="mt-2 text-xs text-stone-500">協会けんぽは標準報酬の約2/3、国保は原則0円として計算。</p>
+                            </div>
+                            <div class="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+                                <p class="text-sm font-bold text-stone-700">将来の年金受給差（月額）</p>
+                                <p id="out-pension-gap" class="mt-3 text-3xl font-black text-red-600">0円</p>
+                                <p class="mt-2 text-xs text-stone-500">今後も会社員を続けた場合と、今から国民年金のみになる場合の差です。</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <section class="mt-8 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+                    <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-stone-800">比較グラフ</h3>
+                            <p class="mt-2 text-sm text-stone-500">年間保険料、休業時補償、年金額の差を同じ画面で比較します。</p>
+                        </div>
+                    </div>
+                    <div class="chart-container max-w-4xl" style="height: 380px;">
+                        <canvas id="simComparisonChart"></canvas>
+                    </div>
+                </section>
+
+                <section class="mt-8 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+                    <div class="mb-6">
+                        <h3 class="text-xl font-bold text-stone-800">年金の見込み額</h3>
+                        <p id="out-pension-note" class="mt-2 text-sm text-stone-500">過去の厚生年金加入年数と、今後の働き方の違いを反映した簡易概算です。</p>
+                    </div>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div class="rounded-2xl border border-blue-100 bg-blue-50 p-5">
+                            <p class="text-sm font-bold text-blue-700">会社員を続けた場合の年金（月額）</p>
+                            <p id="out-employee-pension" class="mt-3 text-3xl font-black text-stone-900">0円</p>
+                            <p id="out-employee-pension-detail" class="mt-2 text-xs text-stone-500">過去年数に加え、60歳まで厚生年金が積み上がる前提です。</p>
+                        </div>
+                        <div class="rounded-2xl border border-orange-100 bg-orange-50 p-5">
+                            <p class="text-sm font-bold text-orange-700">今から個人事業主になる場合の年金（月額）</p>
+                            <p id="out-freelance-pension" class="mt-3 text-3xl font-black text-stone-900">0円</p>
+                            <p id="out-freelance-pension-detail" class="mt-2 text-xs text-stone-500">過去の厚生年金分は残しつつ、今後は国民年金のみになる前提です。</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mt-8 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+                    <div class="mb-6">
+                        <h3 class="text-xl font-bold text-stone-800">年金保険料の支払い比較</h3>
+                        <p id="out-pension-premium-note" class="mt-2 text-sm text-stone-500">現在の年収を前提に、今後1年間で支払う年金保険料の差を比較します。</p>
+                    </div>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div class="rounded-2xl border border-blue-100 bg-blue-50 p-5">
+                            <p class="text-sm font-bold text-blue-700">会社員を続けた場合の年金保険料（年額）</p>
+                            <p id="out-employee-pension-premium" class="mt-3 text-3xl font-black text-stone-900">0円</p>
+                            <p id="out-employee-pension-premium-detail" class="mt-2 text-xs text-stone-500">厚生年金の本人負担分を表示します。</p>
+                        </div>
+                        <div class="rounded-2xl border border-orange-100 bg-orange-50 p-5">
+                            <p class="text-sm font-bold text-orange-700">個人事業主の国民年金保険料（年額）</p>
+                            <p id="out-freelance-pension-premium" class="mt-3 text-3xl font-black text-stone-900">0円</p>
+                            <p id="out-freelance-pension-premium-detail" class="mt-2 text-xs text-stone-500">国民年金の定額保険料のみを表示します。</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 rounded-2xl bg-stone-900 p-5 text-white">
+                        <p class="text-sm text-stone-400">今後1年間の支払い差額</p>
+                        <p id="out-pension-premium-gap" class="mt-2 text-4xl font-black">0円</p>
+                    </div>
+                </section>
+
+                <section class="mt-8 grid gap-4 lg:grid-cols-3">
+                    <article class="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+                        <h4 class="font-bold text-stone-800">協会けんぽ 東京 2026</h4>
+                        <p class="mt-3 text-sm leading-relaxed text-stone-600">
+                            健康保険料率 9.85%、介護保険料率 1.62%、子ども・子育て支援金率 0.23% を前提に、本人負担を折半計算しています。
+                        </p>
+                    </article>
+                    <article class="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+                        <h4 class="font-bold text-stone-800">国保 東京モデル 2026</h4>
+                        <p class="mt-3 text-sm leading-relaxed text-stone-600">
+                            渋谷区の2026年度料率を使用し、所得割・均等割・介護分を概算しています。軽減措置、減免、自治体独自支援は未反映です。
+                        </p>
+                    </article>
+                    <article class="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+                        <h4 class="font-bold text-stone-800">このモデルの見方</h4>
+                        <p class="mt-3 text-sm leading-relaxed text-stone-600">
+                            厳密な税額計算ではなく、独立時に見落としやすい「家族人数」「介護年齢帯」「休業補償」「年金差」をまとめて把握するための比較用です。
+                        </p>
+                    </article>
+                </section>
+            </section>
+
+        </div>
+
+        <section class="mt-8 rounded-3xl border border-stone-200 bg-white p-8">
+            <div class="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-orange-700">Reference</p>
+                    <h2 class="mt-2 text-2xl font-bold text-stone-900">関連する政策動向</h2>
+                    <p class="mt-3 max-w-3xl text-sm leading-relaxed text-stone-600">
+                        背景には、個人事業主による健康保険組合加入の制限強化に関する厚生労働省の通知があります。制度変更の原文確認用として公式ページを参照できるようにしています。
+                    </p>
+                </div>
+                <a href="https://www.mhlw.go.jp/stf/houdou/0000190457_00024.html" target="_blank" class="rounded-full bg-orange-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-orange-700">厚労省の通知を見る</a>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const pageTabAnalysis = document.getElementById('page-tab-analysis');
+            const pageTabSimulator = document.getElementById('page-tab-simulator');
+            const pageModeAnalysis = document.getElementById('page-mode-analysis');
+            const pageModeSimulator = document.getElementById('page-mode-simulator');
+            
+            const stateData = {
+                employee: {
+                    burden: "会社と折半 (実質50%)",
+                    burdenDesc: "会社が半分負担するため、給与天引きで済んでいました。",
+                    dependent: "保険料は無料",
+                    dependentDesc: "専業主婦(夫)や子供の分の健康保険料はかかりません。",
+                    sick: "傷病手当金 (給与の約2/3)",
+                    sickDesc: "病気で長期間休んでも、最長1年6ヶ月の所得保障があります。",
+                    maternity: "出産手当金あり",
+                    maternityDesc: "出産のための休業期間中も一定の補償が受けられます。",
+                    pension: "2階建て (手厚い)",
+                    pensionDesc: "基礎年金に加えて、報酬に比例した厚生年金が上乗せされます。",
+                    disability: "厚生年金による加算あり",
+                    disabilityDesc: "軽度の障害（3級など）でも給付があり、遺族への補償も厚いです。",
+                    colorClass: "border-blue-500",
+                    textClass: "text-blue-600"
+                },
+                freelance: {
+                    burden: "全額自己負担 (100%)",
+                    burdenDesc: "会社負担がなくなるため、実質的な支払額は倍増に近い感覚になります。",
+                    dependent: "人数分加算 (均等割)",
+                    dependentDesc: "家族がいる場合、人数分だけ保険料が加算されます。",
+                    sick: "原則なし (0円)",
+                    sickDesc: "休業中の所得補償が全くないため、即座に収入減に直結します。",
+                    maternity: "原則なし",
+                    maternityDesc: "出産に伴う休業期間の所得補償はありません。",
+                    pension: "1階建て (基礎のみ)",
+                    pensionDesc: "厚生年金がなくなり、将来の受給額が大幅に減少します。",
+                    disability: "基礎年金のみ (限定的)",
+                    disabilityDesc: "障害等級1・2級のみ対象。より軽い障害や遺族補償が弱くなります。",
+                    colorClass: "border-orange-500",
+                    textClass: "text-orange-600"
+                }
+            };
+
+            const btnEmployee = document.getElementById('btn-employee');
+            const btnFreelance = document.getElementById('btn-freelance');
+            const cards = document.querySelectorAll('.status-card');
+            
+            function updateDashboard(type) {
+                const data = stateData[type];
+                
+                if (type === 'employee') {
+                    btnEmployee.className = "relative w-40 py-3 text-sm font-bold rounded-lg transition-all duration-300 z-10 bg-white text-blue-700 shadow-sm";
+                    btnFreelance.className = "relative w-40 py-3 text-sm font-bold rounded-lg transition-all duration-300 z-10 text-stone-500 hover:text-stone-700 bg-transparent shadow-none";
+                } else {
+                    btnFreelance.className = "relative w-40 py-3 text-sm font-bold rounded-lg transition-all duration-300 z-10 bg-white text-orange-700 shadow-sm";
+                    btnEmployee.className = "relative w-40 py-3 text-sm font-bold rounded-lg transition-all duration-300 z-10 text-stone-500 hover:text-stone-700 bg-transparent shadow-none";
+                }
+
+                cards.forEach(card => {
+                    card.classList.remove('border-blue-500', 'border-orange-500');
+                    card.classList.add(data.colorClass);
+                });
+
+                const elementsToUpdate = ['burden', 'dependent', 'sick', 'maternity', 'pension', 'disability'];
+                
+                elementsToUpdate.forEach(item => {
+                    const statEl = document.getElementById(`stat-${item}`);
+                    const descEl = document.getElementById(`desc-${item}`);
+                    
+                    statEl.classList.remove('text-blue-600', 'text-orange-600', 'text-red-600');
+                    statEl.classList.add(type === 'employee' ? 'text-blue-600' : 'text-red-600'); 
+                    
+                    statEl.textContent = data[item];
+                    descEl.textContent = data[`${item}Desc`];
+                });
+            }
+
+            btnEmployee.addEventListener('click', () => updateDashboard('employee'));
+            btnFreelance.addEventListener('click', () => updateDashboard('freelance'));
+
+            function switchPageMode(mode) {
+                const isAnalysis = mode === 'analysis';
+                pageModeAnalysis.classList.toggle('hidden', !isAnalysis);
+                pageModeSimulator.classList.toggle('hidden', isAnalysis);
+                pageTabAnalysis.classList.toggle('active', isAnalysis);
+                pageTabSimulator.classList.toggle('active', !isAnalysis);
+            }
+
+            pageTabAnalysis.addEventListener('click', () => switchPageMode('analysis'));
+            pageTabSimulator.addEventListener('click', () => switchPageMode('simulator'));
+
+            const ctx = document.getElementById('pensionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['会社員 (例:月収30万)', '個人事業主'],
+                    datasets: [
+                        {
+                            label: '基礎年金 (1階部分)',
+                            data: [68000, 68000],
+                            backgroundColor: '#0d9488',
+                            borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 4, bottomRight: 4 },
+                            barPercentage: 0.6
+                        },
+                        {
+                            label: '厚生年金 (2階部分)',
+                            data: [82000, 0],
+                            backgroundColor: '#3b82f6',
+                            borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
+                            barPercentage: 0.6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: true,
+                            grid: { display: false }
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '将来の年金受給額目安 (円/月)',
+                                font: { size: 12 }
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString() + '円';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y.toLocaleString() + '円';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const simInputs = {
+                income: document.getElementById('sim-income'),
+                age: document.getElementById('sim-age'),
+                spouse: document.getElementById('sim-spouse'),
+                children: document.getElementById('sim-children'),
+                pensionYears: document.getElementById('sim-pension-years'),
+                growthFactor: document.getElementById('sim-growth-factor'),
+                leave: document.getElementById('sim-leave')
+            };
+            const leaveLabel = document.getElementById('sim-leave-label');
+            const outSickLabel = document.getElementById('out-sick-label');
+            const outEmployeeHealth = document.getElementById('out-employee-health');
+            const outFreelanceHealth = document.getElementById('out-freelance-health');
+            const outHealthGap = document.getElementById('out-health-gap');
+            const outSickGap = document.getElementById('out-sick-gap');
+            const outPensionGap = document.getElementById('out-pension-gap');
+            const outEmployeePension = document.getElementById('out-employee-pension');
+            const outFreelancePension = document.getElementById('out-freelance-pension');
+            const outPensionNote = document.getElementById('out-pension-note');
+            const outEmployeePensionDetail = document.getElementById('out-employee-pension-detail');
+            const outFreelancePensionDetail = document.getElementById('out-freelance-pension-detail');
+            const outPensionPremiumNote = document.getElementById('out-pension-premium-note');
+            const outEmployeePensionPremium = document.getElementById('out-employee-pension-premium');
+            const outFreelancePensionPremium = document.getElementById('out-freelance-pension-premium');
+            const outEmployeePensionPremiumDetail = document.getElementById('out-employee-pension-premium-detail');
+            const outFreelancePensionPremiumDetail = document.getElementById('out-freelance-pension-premium-detail');
+            const outPensionPremiumGap = document.getElementById('out-pension-premium-gap');
+
+            function formatYen(value) {
+                return Math.round(value).toLocaleString('ja-JP') + '円';
+            }
+
+            function calcEmployeeHealth(income, age) {
+                const employeeHalfRate = (9.85 + 0.23 + ((age >= 40 && age < 65) ? 1.62 : 0)) / 2 / 100;
+                return income * employeeHalfRate;
+            }
+
+            function calcTokyoNhiModel(income, age, spouseType, children) {
+                const baseIncome = Math.max(income - 430000, 0);
+                const hasSpouse = spouseType !== 'none';
+                const familyCount = 1 + (hasSpouse ? 1 : 0) + children;
+                const careEligible = (age >= 40 && age < 65 ? 1 : 0) + (spouseType === '40to64' ? 1 : 0);
+
+                const mainRate = 10.58 / 100;
+                const mainPerCapita = 67073;
+                const careRate = careEligible > 0 ? 2.43 / 100 : 0;
+                const carePerCapita = 17800 * careEligible;
+
+                return (baseIncome * mainRate) + (familyCount * mainPerCapita) + (baseIncome * careRate) + carePerCapita;
+            }
+
+            function calcEmployeesPensionPart(avgIncome, years) {
+                return (avgIncome / 3600000) * 82000 * (years / 40);
+            }
+
+            function calcEmployeePensionPremium(income) {
+                return income * 0.0915;
+            }
+
+            const simCtx = document.getElementById('simComparisonChart').getContext('2d');
+            const simChart = new Chart(simCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['年間保険料', '休業3か月補償', '将来年金(月額換算)'],
+                    datasets: [
+                        {
+                            label: '会社員 / 協会けんぽ',
+                            data: [0, 0, 0],
+                            backgroundColor: '#2563eb',
+                            borderRadius: 8
+                        },
+                        {
+                            label: '個人事業主 / 国保',
+                            data: [0, 0, 0],
+                            backgroundColor: '#ea580c',
+                            borderRadius: 8
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + Math.round(context.parsed.y).toLocaleString('ja-JP') + '円';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return Math.round(value).toLocaleString('ja-JP') + '円';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            function runScenarioSimulation() {
+                const income = Math.max(parseInt(simInputs.income.value || '0', 10), 0);
+                const age = Math.max(parseInt(simInputs.age.value || '0', 10), 20);
+                const spouseType = simInputs.spouse.value;
+                const children = Math.max(parseInt(simInputs.children.value || '0', 10), 0);
+                const pensionYears = Math.min(Math.max(parseInt(simInputs.pensionYears.value || '0', 10), 1), 45);
+                const growthFactor = Math.min(Math.max(parseFloat(simInputs.growthFactor.value || '0'), 0.5), 1.5);
+                const leaveMonths = Math.max(parseInt(simInputs.leave.value || '0', 10), 1);
+                const futureYears = Math.max(Math.min(60 - age, 40), 0);
+                const avgIncome = income * growthFactor;
+
+                leaveLabel.textContent = leaveMonths.toLocaleString('ja-JP') + 'か月';
+                outSickLabel.textContent = '病気休業' + leaveMonths.toLocaleString('ja-JP') + 'か月時の補償差';
+
+                const employeeHealth = calcEmployeeHealth(income, age);
+                const freelanceHealth = calcTokyoNhiModel(income, age, spouseType, children);
+                const annualGap = freelanceHealth - employeeHealth;
+
+                const employeeSickMonthly = (income / 12) * (2 / 3);
+                const freelanceSickMonthly = 0;
+                const sickGapMonthly = employeeSickMonthly - freelanceSickMonthly;
+
+                const basePension = 70608;
+                const pastEmployeesPension = calcEmployeesPensionPart(avgIncome, pensionYears);
+                const futureEmployeesPension = calcEmployeesPensionPart(income, futureYears);
+                const employeePension = basePension + pastEmployeesPension + futureEmployeesPension;
+                const freelancePension = basePension + pastEmployeesPension;
+                const pensionGap = employeePension - freelancePension;
+                const employeePensionPremium = calcEmployeePensionPremium(income);
+                const freelancePensionPremium = 17920 * 12;
+                const pensionPremiumGap = freelancePensionPremium - employeePensionPremium;
+
+                outEmployeeHealth.textContent = formatYen(employeeHealth);
+                outFreelanceHealth.textContent = formatYen(freelanceHealth);
+                outHealthGap.textContent = (annualGap >= 0 ? '+' : '-') + formatYen(Math.abs(annualGap));
+                outSickGap.textContent = formatYen(sickGapMonthly * leaveMonths);
+                outPensionGap.textContent = formatYen(pensionGap);
+                outEmployeePension.textContent = formatYen(employeePension);
+                outFreelancePension.textContent = formatYen(freelancePension);
+                outPensionNote.textContent = '現在年収 ' + Math.round(income / 10000).toLocaleString('ja-JP') + '万円、過去年収係数 ' + growthFactor.toFixed(2) + '、既加入 ' + pensionYears + '年、今後 ' + futureYears + '年の比較です。';
+                outEmployeePensionDetail.textContent = '基礎年金 ' + Math.round(basePension).toLocaleString('ja-JP') + '円 + 過去の厚生年金 ' + Math.round(pastEmployeesPension).toLocaleString('ja-JP') + '円 + 今後の厚生年金 ' + Math.round(futureEmployeesPension).toLocaleString('ja-JP') + '円/月。';
+                outFreelancePensionDetail.textContent = '基礎年金 ' + Math.round(basePension).toLocaleString('ja-JP') + '円 + 過去の厚生年金 ' + Math.round(pastEmployeesPension).toLocaleString('ja-JP') + '円/月。今後の厚生年金上乗せは止まります。';
+                outEmployeePensionPremium.textContent = formatYen(employeePensionPremium);
+                outFreelancePensionPremium.textContent = formatYen(freelancePensionPremium);
+                outEmployeePensionPremiumDetail.textContent = '厚生年金保険料率18.3%のうち本人負担9.15%で計算。';
+                outFreelancePensionPremiumDetail.textContent = '国民年金保険料は令和8年度の月額17,920円で計算。';
+                outPensionPremiumGap.textContent = (pensionPremiumGap >= 0 ? '+' : '-') + formatYen(Math.abs(pensionPremiumGap));
+                outPensionPremiumNote.textContent = '会社員の厚生年金本人負担と、個人事業主の国民年金定額保険料を今後1年間で比較しています。';
+
+                simChart.data.labels = ['年間保険料', '休業' + leaveMonths + 'か月補償', '将来年金(月額換算)'];
+                simChart.data.datasets[0].data = [employeeHealth, employeeSickMonthly * leaveMonths, employeePension];
+                simChart.data.datasets[1].data = [freelanceHealth, freelanceSickMonthly, freelancePension];
+                simChart.update();
+            }
+
+            Object.values(simInputs).forEach((input) => {
+                input.addEventListener('input', runScenarioSimulation);
+                input.addEventListener('change', runScenarioSimulation);
+            });
+
+            runScenarioSimulation();
+        });
+    </script>
+</body>
+</html>
