@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>税・社会保障・給付の家計インパクトシミュレーション</title>
+    <meta name="description" content="増税・減税、社会保険料、給付金などの政策変更が、年齢・年収・家族構成ごとの家計にどう響くかを可視化するシミュレーター。">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(191, 219, 254, 0.55), transparent 35%),
+                linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+            color: #0f172a;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 860px;
+            margin: 0 auto;
+            height: 340px;
+        }
+
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+
+        .tab-button {
+            transition: all 0.2s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-button.active {
+            border-bottom-color: #0f766e;
+            color: #0f766e;
+            font-weight: 700;
+        }
+
+        .panel-glass {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(12px);
+        }
+
+        input[type="range"] {
+            accent-color: #0f766e;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-6 text-sm">
+        <div class="flex flex-wrap items-center gap-3 text-slate-500">
+            <a href="../../index.html" class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 transition hover:border-teal-300 hover:text-teal-700">
+                政策ハブへ戻る
+            </a>
+            <a href="../index.html" class="font-semibold text-teal-700 hover:text-teal-900">政策一覧</a>
+        </div>
+        <p class="text-xs text-slate-400">直リンク用URL: <span class="font-mono">/policies/jgb-interest-fiscal-household-simulator/</span></p>
+    </div>
+
+    <div class="max-w-6xl mx-auto px-4 pb-16">
+        <header class="mb-12 rounded-[2rem] border border-white/70 bg-slate-950 px-6 py-12 text-white shadow-2xl shadow-teal-950/15 md:px-10">
+            <div class="mb-4 inline-flex rounded-full bg-teal-400/15 px-4 py-1 text-xs font-bold uppercase tracking-[0.2em] text-teal-200">
+                Household Policy Impact
+            </div>
+            <div class="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+                <div>
+                    <h1 class="mb-6 text-4xl font-black tracking-tight md:text-6xl">
+                        増税・減税・給付変更で<br>
+                        <span class="text-teal-300">家計はどう変わるか</span>
+                    </h1>
+                    <p class="max-w-3xl text-lg leading-relaxed text-slate-300">
+                        家計に直接効くのは、国債そのものではなく、消費税や所得税、社会保険料、給付金、子育て支援などの制度変更です。
+                        このページでは、年収、家族構成、年齢条件ごとに、年間の手取りや実質負担がどの程度動くかを簡易モデルで比較します。
+                    </p>
+                </div>
+                <div class="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+                    <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+                        <p class="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">見るポイント</p>
+                        <p class="text-2xl font-black text-emerald-300">名目と実質</p>
+                        <p class="mt-2 text-sm text-slate-300">給付や減税でプラスでも、物価上昇で実質価値が薄れることがあります。</p>
+                    </div>
+                    <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+                        <p class="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">世帯差</p>
+                        <p class="text-2xl font-black text-amber-300">条件で逆転</p>
+                        <p class="mt-2 text-sm text-slate-300">同じ政策でも、単身世帯と子育て世帯では影響の向きが変わります。</p>
+                    </div>
+                    <div class="rounded-3xl border border-white/10 bg-teal-400/10 p-5">
+                        <p class="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-teal-200">このページの前提</p>
+                        <p class="text-2xl font-black text-white">概算モデル</p>
+                        <p class="mt-2 text-sm text-teal-100">制度の方向性を比較するための簡易計算で、実際の税額計算や制度判定ではありません。</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section class="panel-glass sticky top-0 z-40 mb-10 rounded-[2rem] border border-white/70 p-6 shadow-xl shadow-slate-200/50">
+            <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">Global Scenario</p>
+                    <h2 class="mt-2 text-2xl font-black text-slate-900">ページ全体に適用する政策シナリオ</h2>
+                    <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">ここで選んだシナリオが、下のシミュレーターとモデルケース比較の両方に共通で反映されます。</p>
+                </div>
+                <div class="min-w-[280px]">
+                    <label for="scenario" class="mb-2 block text-sm font-bold text-slate-700">政策シナリオ</label>
+                    <select id="scenario" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700" onchange="runSimulation()">
+                        <option value="vat-8">消費税を一律8%</option>
+                        <option value="vat-5">消費税を一律5%</option>
+                        <option value="food-zero">消費税を食料品のみ0%</option>
+                        <option value="income-tax-cut" selected>所得税減税（定額減税）</option>
+                        <option value="social-up">社会保障費増（子ども・子育て支援金）</option>
+                        <option value="social-down">社会保障費減（年収の壁対策）</option>
+                        <option value="cash-benefit">給付金（一律2万円）</option>
+                        <option value="child-support">子育て給付（児童手当拡充）</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-5 rounded-3xl border border-teal-100 bg-teal-50 p-5">
+                <p class="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-teal-700">Scenario Detail</p>
+                <h3 id="scenarioTitle" class="text-xl font-black text-slate-900">所得税減税（定額減税）</h3>
+                <p id="scenarioDescription" class="mt-3 text-sm leading-relaxed text-slate-700">財務省が案内している定額減税を代表例とします。令和6年分では、本人1人あたり所得税3万円、住民税1万円の減税が実施されました。</p>
+                <div class="mt-4 grid gap-3 md:grid-cols-2">
+                    <div class="rounded-2xl bg-white p-4">
+                        <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">数値の置き方</p>
+                        <p id="scenarioNumbers" class="mt-2 text-sm leading-relaxed text-slate-700">このモデルでは、課税世帯1世帯あたり所得税3万円を基本線として反映し、扶養人数分は簡易化しています。</p>
+                    </div>
+                    <div class="rounded-2xl bg-white p-4">
+                        <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">代表例</p>
+                        <p id="scenarioSource" class="mt-2 text-sm leading-relaxed text-slate-700">代表例: 財務省「令和6年6月から実施 定額減税」</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <nav class="mb-10 flex flex-wrap justify-center gap-4 border-b border-slate-200">
+            <button class="tab-button active px-5 py-4 text-sm md:text-base" onclick="switchTab('overview')" id="btn-overview">全体像</button>
+            <button class="tab-button px-5 py-4 text-sm md:text-base" onclick="switchTab('simulator')" id="btn-simulator">条件シミュレーター</button>
+            <button class="tab-button px-5 py-4 text-sm md:text-base" onclick="switchTab('cases')" id="btn-cases">モデルケース比較</button>
+            <button class="tab-button px-5 py-4 text-sm md:text-base" onclick="switchTab('methodology')" id="btn-methodology">計算根拠</button>
+            <button class="tab-button px-5 py-4 text-sm md:text-base" onclick="switchTab('assumptions')" id="btn-assumptions">前提と限界</button>
+        </nav>
+
+        <main class="min-h-[700px]">
+            <section id="overview" class="space-y-8">
+                <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+                    <div class="panel-glass rounded-[2rem] border border-white/70 p-8 shadow-xl shadow-slate-200/60">
+                        <h2 class="mb-4 text-3xl font-black text-slate-900">家計に直接効く4つの変数に絞る</h2>
+                        <p class="mb-8 text-slate-600">
+                            今回のページでは、抽象度の高い金利や国債ではなく、家庭の可処分所得に直接効く政策変更に絞っています。
+                        </p>
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div class="rounded-3xl bg-slate-50 p-5">
+                                <p class="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-teal-700">01</p>
+                                <h3 class="mb-2 text-lg font-bold">消費税</h3>
+                                <p class="text-sm leading-relaxed text-slate-600">日常の消費支出に広く効くため、低中所得層ほど体感が強く出やすい項目です。</p>
+                            </div>
+                            <div class="rounded-3xl bg-slate-50 p-5">
+                                <p class="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-teal-700">02</p>
+                                <h3 class="mb-2 text-lg font-bold">所得税</h3>
+                                <p class="text-sm leading-relaxed text-slate-600">給与・事業所得に直接かかるため、就業世帯の手取り変化として理解しやすい変数です。</p>
+                            </div>
+                            <div class="rounded-3xl bg-slate-50 p-5">
+                                <p class="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-teal-700">03</p>
+                                <h3 class="mb-2 text-lg font-bold">社会保険料</h3>
+                                <p class="text-sm leading-relaxed text-slate-600">会社員、自営業、年金受給者で効き方は違いますが、実際の家計負担として重く感じやすい項目です。</p>
+                            </div>
+                            <div class="rounded-3xl bg-slate-50 p-5">
+                                <p class="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-teal-700">04</p>
+                                <h3 class="mb-2 text-lg font-bold">給付・補助</h3>
+                                <p class="text-sm leading-relaxed text-slate-600">子育て支援、定額給付、負担軽減策は、世帯属性によって恩恵が偏るため比較価値が高い領域です。</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-glass rounded-[2rem] border border-white/70 p-8 shadow-xl shadow-slate-200/60">
+                        <h2 class="mb-5 text-2xl font-black text-slate-900">このページの見方</h2>
+                        <div class="space-y-5">
+                            <div class="rounded-2xl border border-teal-100 bg-teal-50 p-5">
+                                <p class="text-sm font-bold text-teal-800">1. 上で政策シナリオを選ぶ</p>
+                                <p class="mt-2 text-sm leading-relaxed text-teal-900">シナリオ選択は全タブ共通です。シミュレーターとモデルケース比較の両方に同じ条件が反映されます。</p>
+                            </div>
+                            <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                                <p class="text-sm font-bold text-slate-800">2. 家計条件を入力する</p>
+                                <p class="mt-2 text-sm leading-relaxed text-slate-600">年収、家族構成、年齢帯、消費支出、就業形態が主な分岐要素です。</p>
+                            </div>
+                            <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                                <p class="text-sm font-bold text-slate-800">3. 名目と実質を分けて見る</p>
+                                <p class="mt-2 text-sm leading-relaxed text-slate-600">給付や減税の額面がプラスでも、物価上昇を考慮すると実質的な改善幅が縮むケースがあります。</p>
+                            </div>
+                            <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                                <p class="text-sm font-bold text-slate-800">4. 世帯別の違いを見る</p>
+                                <p class="mt-2 text-sm leading-relaxed text-slate-600">単身、子育て世帯、高齢世帯では、同じ政策の評価が逆転することがあります。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="simulator" class="hidden space-y-8">
+                <div class="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+                    <div class="panel-glass rounded-[2rem] border border-white/70 p-8 shadow-xl shadow-slate-200/60">
+                        <h2 class="mb-6 text-3xl font-black text-slate-900">条件シミュレーター</h2>
+                        <div class="space-y-7">
+                            <div class="grid gap-5 sm:grid-cols-2">
+                                <div>
+                                    <label class="mb-2 block text-sm font-bold text-slate-700">年齢帯</label>
+                                    <select id="ageBand" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700" onchange="runSimulation()">
+                                        <option value="20s">20代</option>
+                                        <option value="30s" selected>30代</option>
+                                        <option value="40s">40代</option>
+                                        <option value="50s">50代</option>
+                                        <option value="60plus">60代以上</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="mb-2 block text-sm font-bold text-slate-700">世帯構成</label>
+                                    <select id="familyType" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700" onchange="runSimulation()">
+                                        <option value="single">単身</option>
+                                        <option value="couple">夫婦</option>
+                                        <option value="family3" selected>夫婦＋子1人</option>
+                                        <option value="family4">夫婦＋子2人</option>
+                                        <option value="senior">高齢夫婦</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="mb-3 flex items-center justify-between">
+                                    <label class="text-sm font-bold text-slate-700">世帯年収</label>
+                                    <span id="incomeValue" class="rounded-full bg-teal-600 px-3 py-1 text-sm font-bold text-white">800万円</span>
+                                </div>
+                                <input id="income" type="range" min="80" max="2500" step="10" value="800" class="w-full" oninput="runSimulation()">
+                            </div>
+
+                            <div>
+                                <div class="mb-3 flex items-center justify-between">
+                                    <label class="text-sm font-bold text-slate-700">年間消費支出</label>
+                                    <span id="spendingValue" class="rounded-full bg-slate-800 px-3 py-1 text-sm font-bold text-white">420万円</span>
+                                </div>
+                                <input id="spending" type="range" min="120" max="1200" step="10" value="420" class="w-full" oninput="runSimulation()">
+                            </div>
+
+                            <div class="grid gap-5 sm:grid-cols-2">
+                                <div>
+                                    <label class="mb-2 block text-sm font-bold text-slate-700">就業形態</label>
+                                    <select id="workType" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700" onchange="runSimulation()">
+                                        <option value="employee" selected>会社員中心</option>
+                                        <option value="dependent-parttime">扶養内パート中心</option>
+                                        <option value="self-employed">自営業中心</option>
+                                        <option value="pension">年金中心</option>
+                                    </select>
+                                </div>
+                                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                    住居条件は今回は使いません。<br>直接効く税・保険料・給付に絞っています。
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-8">
+                        <div class="rounded-[2rem] bg-slate-950 p-8 text-white shadow-2xl shadow-teal-950/15">
+                            <p class="mb-6 text-xs font-bold uppercase tracking-[0.25em] text-teal-200">Household Impact Estimate</p>
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div class="rounded-3xl bg-white/5 p-5">
+                                    <p class="text-sm text-slate-300">年間の名目影響</p>
+                                    <p id="nominalAnnual" class="mt-2 text-4xl font-black text-emerald-300">+12万円</p>
+                                </div>
+                                <div class="rounded-3xl bg-white/5 p-5">
+                                    <p class="text-sm text-slate-300">年間の実質影響</p>
+                                    <p id="realAnnual" class="mt-2 text-4xl font-black text-amber-300">+8万円</p>
+                                </div>
+                                <div class="rounded-3xl bg-teal-400/10 p-5">
+                                    <p class="text-sm text-teal-100">月あたり影響</p>
+                                    <p id="monthlyImpact" class="mt-2 text-5xl font-black text-white">+0.7万円</p>
+                                </div>
+                                <div class="rounded-3xl bg-white/5 p-5">
+                                    <p class="text-sm text-slate-300">10年累積実質影響</p>
+                                    <p id="decadeImpact" class="mt-2 text-5xl font-black text-rose-300">+67万円</p>
+                                </div>
+                                <div class="rounded-3xl bg-white/5 p-5 md:col-span-2">
+                                    <p class="text-sm text-slate-300">年収に対する実質影響率</p>
+                                    <p id="incomeRatio" class="mt-2 text-5xl font-black text-teal-300">+1.0%</p>
+                                    <p class="mt-2 text-sm text-slate-400">政策がどの所得層を狙っているかを見るため、額面ではなく所得比も表示します。</p>
+                                </div>
+                            </div>
+                            <div class="mt-6 rounded-3xl border border-white/10 bg-white/5 p-5">
+                                <p class="mb-2 text-sm font-bold text-slate-200">要約</p>
+                                <p id="summaryLine" class="text-sm leading-relaxed text-slate-300">所得税減税が手取りを押し上げていますが、物価調整後の実質改善はそれより小さくなります。</p>
+                            </div>
+                        </div>
+
+                        <div class="panel-glass rounded-[2rem] border border-white/70 p-8 shadow-xl shadow-slate-200/60">
+                            <div class="mb-6 flex items-center justify-between">
+                                <h3 class="text-2xl font-black text-slate-900">年間影響の内訳</h3>
+                                <p class="text-xs text-slate-400">単位: 万円</p>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="impactChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="cases" class="hidden space-y-8">
+                <div class="panel-glass rounded-[2rem] border border-white/70 p-8 shadow-xl shadow-slate-200/60">
+                    <div class="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                        <div>
+                            <h2 class="text-3xl font-black text-slate-900">モデルケース比較</h2>
+                            <p class="mt-3 max-w-3xl text-slate-600">上で選択した政策シナリオを前提に、代表的な家計を比較します。`額面` と `世帯年収比`、必要に応じて `本人収入比` を切り替えて、どの層を狙った政策かを見ます。</p>
+                        </div>
+                        <div class="flex flex-col gap-3 md:items-end">
+                            <div class="rounded-2xl bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-800">
+                                適用中のシナリオ: <span id="caseScenarioLabel">所得税減税</span>
+                            </div>
+                            <div class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                                <label for="compareMetric" class="font-semibold text-slate-700">比較指標</label>
+                                <select id="compareMetric" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700" onchange="runSimulation()">
+                                    <option value="household_ratio" selected>世帯年収比</option>
+                                    <option value="amount">額面（万円）</option>
+                                    <option value="personal_ratio">本人収入比</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="caseChart"></canvas>
+                    </div>
+                    <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        <div class="rounded-3xl border border-slate-200 bg-white p-5">
+                            <p class="mb-2 text-sm font-bold text-slate-800">若年単身・賃貸</p>
+                            <p class="text-sm text-slate-600">額面は小さくても、所得比で見ると影響率が大きく出やすい層です。</p>
+                        </div>
+                        <div class="rounded-3xl border border-slate-200 bg-white p-5">
+                            <p class="mb-2 text-sm font-bold text-slate-800">子育て世帯・中所得</p>
+                            <p class="text-sm text-slate-600">消費税負担率と子育て給付が同時に効くため、ターゲットの違いが見えやすい層です。</p>
+                        </div>
+                        <div class="rounded-3xl border border-slate-200 bg-white p-5">
+                            <p class="mb-2 text-sm font-bold text-slate-800">高所得共働き</p>
+                            <p class="text-sm text-slate-600">額面差は大きく見えても、所得比では影響率が縮みやすい層です。</p>
+                        </div>
+                        <div class="rounded-3xl border border-slate-200 bg-white p-5">
+                            <p class="mb-2 text-sm font-bold text-slate-800">高齢夫婦・年金中心</p>
+                            <p class="text-sm text-slate-600">所得税より、消費税や定額給付、社会保険料軽減の影響が目立ちやすい層です。</p>
+                        </div>
+                        <div class="rounded-3xl border border-slate-200 bg-white p-5">
+                            <p class="mb-2 text-sm font-bold text-slate-800">自営業世帯</p>
+                            <p class="text-sm text-slate-600">所得変動があるため、定率減税よりも保険料や給付の影響が体感しやすいモデルです。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="methodology" class="hidden space-y-8">
+                <div class="panel-glass rounded-[2rem] border border-white/70 p-8 shadow-xl shadow-slate-200/60">
+                    <h2 class="mb-5 text-3xl font-black text-slate-900">計算ロジックの考え方</h2>
+                    <p class="max-w-4xl text-sm leading-relaxed text-slate-600">
+                        このページは、税や給付の制度を厳密再現する税額計算機ではなく、政策変更の方向差を家計に引き直すための比較モデルです。
+                        実装上は、各シナリオを `消費税影響` `所得税影響` `社会保険料影響` `給付・補助` `物価調整` の5要素に分解して計算しています。
+                    </p>
+                </div>
+
+                <div class="grid gap-6 lg:grid-cols-2">
+                    <div class="panel-glass rounded-[2rem] border border-white/70 p-8 shadow-xl shadow-slate-200/60">
+                        <h3 class="mb-4 text-2xl font-black text-slate-900">1. 名目影響の定義</h3>
+                        <p class="mb-4 text-sm leading-relaxed text-slate-600">名目影響は、家計に直接入る金額と直接出る金額の差です。ページ内部では次の式で定義しています。</p>
+                        <pre class="overflow-x-auto rounded-3xl bg-slate-950 p-5 text-sm text-slate-100"><code>名目影響 ＝ 給付・補助
+          － 消費税負担増減
+          － 所得税負担増減
+          － 社会保険料負担増減</code></pre>
+                        <p class="mt-4 text-sm leading-relaxed text-slate-600">
+                            プラス方向は減税や給付、マイナス方向は増税や保険料負担増です。ここでは、ローン金利や資産価格などの二次波及はあえて入れていません。
+                        </p>
+                    </div>
+
+                    <div class="panel-glass rounded-[2rem] border border-white/70 p-8 shadow-xl shadow-slate-200/60">
+                        <h3 class="mb-4 text-2xl font-black text-slate-900">2. 実質影響の定義</h3>
+                        <p class="mb-4 text-sm leading-relaxed text-slate-600">実質影響は、名目影響から物価調整分を差し引いた値です。</p>
+                        <pre class="overflow-x-auto rounded-3xl bg-slate-950 p-5 text-sm text-slate-100"><code>実質影響 ＝ 名目影響 － 物価調整分
+
+物価調整分 ＝ 年間消費支出 × シナリオ別インフレ補正率</code></pre>
+                        <p class="mt-4 text-sm leading-relaxed text-slate-600">
+                            給付や減税が額面でプラスでも、需要刺激や税率変更に伴う価格転嫁で実質改善が縮むことを見せるため、簡易なインフレ補正率を置いています。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid gap-6 lg:grid-cols-3">
+                    <div class="panel-glass rounded-[2rem] border border-white/70 p-8 shadow-xl shadow-slate-200/60">
+                        <h3 class="mb-4 text-xl font-black text-slate-900">消費税シナリオ</h3>
+                        <p class="text-sm leading-relaxed text-slate-600">一律税率変更は `年間消費支出 × 税率差` で置いています。食料品0%は、世帯構成ごとに置いた `食費比率` だけに8%差分を掛けています。</p>
+                        <pre class="mt-4 overflow-x-auto rounded-3xl bg-slate-950 p-5 text-sm text-slate-100"><code>一律税率変更:
+消費税影響 ＝ 年間消費支出 × 税率差
+
+食料品0%:
+消費税影響 ＝ 年間消費支出 × 食費比率 × 8%</code></pre>
+                    </div>
+
+                    <div class="panel-glass rounded-[2rem] border border-white/70 p-8 shadow-xl shadow-slate-200/60">
+                        <h3 class="mb-4 text-xl font-black text-slate-900">所得税・保険料シナリオ</h3>
+                        <p class="text-sm leading-relaxed text-slate-600">所得税減税は代表例として `定額減税3万円` を採用し、年齢帯と就業形態で簡易ウェイトを掛けています。社会保険料は、支援金制度などの実効負担率を年収に掛けています。</p>
+                        <pre class="mt-4 overflow-x-auto rounded-3xl bg-slate-950 p-5 text-sm text-slate-100"><code>所得税影響 ＝ 定額減税額 × 年齢ウェイト × 就業ウェイト
+
+社会保険料影響 ＝ 年収 × 実効負担率 × 年齢ウェイト</code></pre>
+                    </div>
+
+                    <div class="panel-glass rounded-[2rem] border border-white/70 p-8 shadow-xl shadow-slate-200/60">
+                        <h3 class="mb-4 text-xl font-black text-slate-900">給付シナリオ</h3>
+                        <p class="text-sm leading-relaxed text-slate-600">一律給付は `大人人数 × 大人単価 + 子ども人数 × 子ども単価` で置きます。児童手当拡充は、年齢細分化を簡略化し `子ども1人年12万円` を基本線にしています。</p>
+                        <pre class="mt-4 overflow-x-auto rounded-3xl bg-slate-950 p-5 text-sm text-slate-100"><code>給付影響 ＝ 大人人数 × 単価 + 子ども人数 × 単価
+
+児童手当拡充:
+給付影響 ＝ 子ども人数 × 12万円 × 年齢ウェイト</code></pre>
+                    </div>
+                </div>
+
+                <div class="grid gap-6 lg:grid-cols-2">
+                    <div class="panel-glass rounded-[2rem] border border-white/70 p-8 shadow-xl shadow-slate-200/60">
+                        <h3 class="mb-4 text-2xl font-black text-slate-900">3. 世帯属性のウェイト</h3>
+                        <p class="text-sm leading-relaxed text-slate-600">
+                            このページでは、制度差を世帯条件へ落とすために `年齢帯ウェイト` `就業形態ウェイト` `食費比率` を使っています。
+                            例えば、年金中心世帯は所得税の効き方を弱め、扶養内パート中心は年収の壁対策の効きを強めています。
+                        </p>
+                        <ul class="mt-4 space-y-3 text-sm leading-relaxed text-slate-600">
+                            <li>・年齢帯ウェイト: 納税・保険料・給付の効き方を調整</li>
+                            <li>・就業形態ウェイト: 会社員、自営業、年金、扶養内パートで差をつける</li>
+                            <li>・食費比率: 食料品0%シナリオで世帯別の効き方を変える</li>
+                        </ul>
+                    </div>
+
+                    <div class="panel-glass rounded-[2rem] border border-white/70 p-8 shadow-xl shadow-slate-200/60">
+                        <h3 class="mb-4 text-2xl font-black text-slate-900">4. なぜ率表示が必要か</h3>
+                        <p class="text-sm leading-relaxed text-slate-600">
+                            額面差だけを見ると、高所得世帯や多人数世帯の影響が常に大きく見えます。しかし政策評価で重要なのは、家計規模や所得に対してどれだけ効くかです。
+                            そのため、モデルケース比較では次の3指標を切り替えています。
+                        </p>
+                        <ul class="mt-4 space-y-3 text-sm leading-relaxed text-slate-600">
+                            <li>・額面: 家計全体の増減額そのもの</li>
+                            <li>・世帯年収比: 家計全体に対してどれだけ効くか</li>
+                            <li>・本人収入比: 壁付近パートのような対象限定策の効きを見る</li>
+                        </ul>
+                        <pre class="mt-4 overflow-x-auto rounded-3xl bg-slate-950 p-5 text-sm text-slate-100"><code>世帯年収比 ＝ 実質影響 ÷ 世帯年収
+本人収入比 ＝ 実質影響 ÷ 本人収入</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section id="assumptions" class="hidden space-y-8">
+                <div class="grid gap-6 lg:grid-cols-2">
+                    <div class="panel-glass rounded-[2rem] border border-white/70 p-8 shadow-xl shadow-slate-200/60">
+                        <h2 class="mb-5 text-3xl font-black text-slate-900">前提</h2>
+                        <ul class="space-y-4 text-sm leading-relaxed text-slate-600">
+                            <li>・税額や社会保険料は厳密計算ではなく、政策変更の方向差を見る簡易モデルです。</li>
+                            <li>・名目影響は、減税・給付・負担増減の額面合計です。</li>
+                            <li>・実質影響は、シナリオごとに想定した物価調整分を差し引いた概算値です。</li>
+                            <li>・実際の制度では所得制限、非課税判定、自治体差、年齢区分などで結果が変わります。</li>
+                        </ul>
+                    </div>
+                    <div class="panel-glass rounded-[2rem] border border-white/70 p-8 shadow-xl shadow-slate-200/60">
+                        <h2 class="mb-5 text-3xl font-black text-slate-900">今回やめたこと</h2>
+                        <ul class="space-y-4 text-sm leading-relaxed text-slate-600">
+                            <li>・金利や国債を家計への直接入力変数として置く設計</li>
+                            <li>・財政拡大をそのままプラス評価に見せる表現</li>
+                            <li>・タブ内条件だけで他タブのグラフが連動する分かりにくいUI</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="panel-glass rounded-[2rem] border border-white/70 p-8 shadow-xl shadow-slate-200/60">
+                    <h2 class="mb-5 text-3xl font-black text-slate-900">代表例の参照先</h2>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <a href="https://www.mof.go.jp/public_relations/finance/202407/202407c.html" target="_blank" rel="noopener noreferrer" class="rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-teal-300">
+                            <p class="text-sm font-bold text-slate-800">財務省: 定額減税</p>
+                            <p class="mt-2 text-sm text-slate-600">本人1人あたり所得税3万円、住民税1万円。</p>
+                        </a>
+                        <a href="https://www.dpfp.or.jp/emergency_economic_measures" target="_blank" rel="noopener noreferrer" class="rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-teal-300">
+                            <p class="text-sm font-bold text-slate-800">国民民主党: 消費税5%</p>
+                            <p class="mt-2 text-sm text-slate-600">10%から5%への時限的な引下げ案。</p>
+                        </a>
+                        <a href="https://cdp-japan.jp/archive/election2025/visions/policy_details/" target="_blank" rel="noopener noreferrer" class="rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-teal-300">
+                            <p class="text-sm font-bold text-slate-800">立憲民主党: 食料品消費税0%</p>
+                            <p class="mt-2 text-sm text-slate-600">食料品の税率を8%から0%へ下げる案。</p>
+                        </a>
+                        <a href="https://www.cfa.go.jp/policies/kodomokosodateshienkinseido" target="_blank" rel="noopener noreferrer" class="rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-teal-300">
+                            <p class="text-sm font-bold text-slate-800">こども家庭庁: 子ども・子育て支援金制度</p>
+                            <p class="mt-2 text-sm text-slate-600">令和8年度の被用者保険の一律支援金率は0.23%。</p>
+                        </a>
+                        <a href="https://www.mhlw.go.jp/stf/taiou_001_00004.html" target="_blank" rel="noopener noreferrer" class="rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-teal-300">
+                            <p class="text-sm font-bold text-slate-800">厚労省: 年収の壁・支援強化パッケージ</p>
+                            <p class="mt-2 text-sm text-slate-600">106万円で約16万円、130万円で約27万円の負担例への対応。</p>
+                        </a>
+                        <a href="https://www.jimin.jp/election/results/sen_san27/political_promise/bukkadakataisaku/" target="_blank" rel="noopener noreferrer" class="rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-teal-300">
+                            <p class="text-sm font-bold text-slate-800">自民党: 一律2万円給付</p>
+                            <p class="mt-2 text-sm text-slate-600">国民一律2万円、子どもは1人2万円を加算。</p>
+                        </a>
+                        <a href="https://www.cfa.go.jp/policies/kokoseido/jidouteate/mottoouen" target="_blank" rel="noopener noreferrer" class="rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-teal-300">
+                            <p class="text-sm font-bold text-slate-800">こども家庭庁: 児童手当拡充</p>
+                            <p class="mt-2 text-sm text-slate-600">3歳未満1.5万円、3歳以上高校生年代まで1万円、第3子以降3万円。</p>
+                        </a>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const scenarioConfig = {
+            'vat-8': {
+                label: '消費税を一律8%',
+                mode: 'vat-all',
+                vatDelta: -0.02,
+                description: '現在の標準税率10%を一律8%へ下げる中間ケースです。特定政党のそのままの公約ではなく、10%と5%の間にある比較用シナリオとして置いています。',
+                numbers: 'このモデルでは、課税対象支出に対して実効2%分の負担減を反映します。',
+                source: '比較用の中間ケースとして設定。消費税5%や食料品0%の議論の間を埋める想定です。',
+                inflationAdjustment: -0.003
+            },
+            'vat-5': {
+                label: '消費税を一律5%',
+                mode: 'vat-all',
+                vatDelta: -0.05,
+                description: '国民民主党の「消費税率を10%から5%に引き下げる減税を、1年間の時限措置として行う」という提案を代表例として使います。',
+                numbers: 'このモデルでは、課税対象支出に対して実効5%分の負担減を反映します。',
+                source: '代表例: 国民民主党「家計第一の経済対策」',
+                inflationAdjustment: -0.005
+            },
+            'food-zero': {
+                label: '消費税を食料品のみ0%',
+                mode: 'vat-food',
+                vatDelta: -0.08,
+                description: '立憲民主党が掲げる「食料品の消費税を現在の8%から0%に下げる」案を代表例として使います。',
+                numbers: 'このモデルでは、年間消費支出のうち食費相当分だけ8%分を減税効果として反映します。',
+                source: '代表例: 立憲民主党「食料品消費税0%」',
+                inflationAdjustment: -0.004
+            },
+            'income-tax-cut': {
+                label: '所得税減税（定額減税）',
+                mode: 'income-tax-cut',
+                description: '財務省が案内している令和6年の定額減税を代表例とします。納税者本人1人あたり所得税3万円、住民税1万円の減税が行われました。',
+                numbers: 'このモデルでは、所得税3万円分の減税を基本線に、扶養要素は簡易化して反映します。',
+                source: '代表例: 財務省「令和6年6月から実施 定額減税」',
+                inflationAdjustment: 0.003
+            },
+            'social-up': {
+                label: '社会保障費増（子ども・子育て支援金）',
+                mode: 'social-up',
+                description: 'こども家庭庁の子ども・子育て支援金制度を代表例とします。令和8年度の被用者保険の一律支援金率は0.23%で、個人負担はその半分が目安です。',
+                numbers: 'このモデルでは、会社員世帯は年収の約0.115%分、自営業・年金世帯はやや小さめの負担増として反映します。',
+                source: '代表例: こども家庭庁「子ども・子育て支援金制度」',
+                inflationAdjustment: 0.001
+            },
+            'social-down': {
+                label: '社会保障費減（年収の壁対策）',
+                mode: 'social-down',
+                description: '厚労省の「年収の壁・支援強化パッケージ」を代表例とします。106万円や130万円の壁で発生する社会保険料負担を緩和する考え方です。',
+                numbers: '政府広報では、106万円の壁で一般的に年約16万円、130万円の壁で年約27万円の負担が生じる例を示しています。このモデルでは扶養内パート中心の世帯に重点反映します。',
+                source: '代表例: 厚生労働省「年収の壁・支援強化パッケージ」',
+                inflationAdjustment: 0
+            },
+            'cash-benefit': {
+                label: '給付金（一律2万円）',
+                mode: 'cash-benefit',
+                description: '自民党の2025年参院選公約にある「すべての国民に一律2万円給付、子どもはさらに2万円加算」を代表例とします。',
+                numbers: 'このモデルでは、大人1人2万円、子ども1人4万円として年間の給付額に反映します。',
+                source: '代表例: 自民党「物価高対策」',
+                inflationAdjustment: 0.004
+            },
+            'child-support': {
+                label: '子育て給付（児童手当拡充）',
+                mode: 'child-support',
+                description: 'こども家庭庁の児童手当拡充を代表例とします。高校生年代まで対象、3歳未満は月1.5万円、3歳以上は月1万円、第3子以降は月3万円です。',
+                numbers: 'このモデルでは、子ども1人につき年12万円を基本線として、子育て世帯の給付増を簡易反映します。',
+                source: '代表例: こども家庭庁「もっと子育て応援！児童手当」',
+                inflationAdjustment: 0.002
+            }
+        };
+
+        const familyConfig = {
+            single: { adults: 1, children: 0, label: '単身', foodShare: 0.24 },
+            couple: { adults: 2, children: 0, label: '夫婦', foodShare: 0.23 },
+            family3: { adults: 2, children: 1, label: '夫婦＋子1人', foodShare: 0.26 },
+            family4: { adults: 2, children: 2, label: '夫婦＋子2人', foodShare: 0.28 },
+            senior: { adults: 2, children: 0, label: '高齢夫婦', foodShare: 0.27 }
+        };
+
+        const ageConfig = {
+            '20s': { taxWeight: 0.85, socialWeight: 0.9, benefitWeight: 0.9, label: '20代' },
+            '30s': { taxWeight: 1.0, socialWeight: 1.0, benefitWeight: 1.0, label: '30代' },
+            '40s': { taxWeight: 1.12, socialWeight: 1.05, benefitWeight: 1.0, label: '40代' },
+            '50s': { taxWeight: 1.18, socialWeight: 1.05, benefitWeight: 0.95, label: '50代' },
+            '60plus': { taxWeight: 0.55, socialWeight: 0.75, benefitWeight: 1.2, label: '60代以上' }
+        };
+
+        const workTypeConfig = {
+            employee: { incomeTaxWeight: 1.0, socialWeight: 1.0, label: '会社員中心' },
+            'dependent-parttime': { incomeTaxWeight: 0.35, socialWeight: 0.9, label: '扶養内パート中心' },
+            'self-employed': { incomeTaxWeight: 0.85, socialWeight: 0.8, label: '自営業中心' },
+            pension: { incomeTaxWeight: 0.45, socialWeight: 0.35, label: '年金中心' }
+        };
+
+        let impactChart;
+        let caseChart;
+
+        function switchTab(id) {
+            ['overview', 'simulator', 'cases', 'methodology', 'assumptions'].forEach(sectionId => {
+                document.getElementById(sectionId).classList.add('hidden');
+                document.getElementById('btn-' + sectionId).classList.remove('active');
+            });
+            document.getElementById(id).classList.remove('hidden');
+            document.getElementById('btn-' + id).classList.add('active');
+            runSimulation();
+        }
+
+        function currentInputs() {
+            return {
+                scenario: document.getElementById('scenario').value,
+                ageBand: document.getElementById('ageBand').value,
+                familyType: document.getElementById('familyType').value,
+                income: parseInt(document.getElementById('income').value, 10),
+                spending: parseInt(document.getElementById('spending').value, 10),
+                workType: document.getElementById('workType').value
+            };
+        }
+
+        function updateInputLabels(inputs) {
+            document.getElementById('incomeValue').innerText = inputs.income.toLocaleString() + '万円';
+            document.getElementById('spendingValue').innerText = inputs.spending.toLocaleString() + '万円';
+        }
+
+        function updateScenarioDetail(scenario) {
+            document.getElementById('scenarioTitle').innerText = scenario.label;
+            document.getElementById('scenarioDescription').innerText = scenario.description;
+            document.getElementById('scenarioNumbers').innerText = scenario.numbers;
+            document.getElementById('scenarioSource').innerText = scenario.source;
+        }
+
+        function formatMan(value) {
+            const rounded = Math.round(value);
+            const sign = rounded > 0 ? '+' : '';
+            return sign + rounded.toLocaleString() + '万円';
+        }
+
+        function calculateModel(inputs) {
+            const scenario = scenarioConfig[inputs.scenario];
+            const family = familyConfig[inputs.familyType];
+            const age = ageConfig[inputs.ageBand];
+            const work = workTypeConfig[inputs.workType];
+
+            const annualIncome = inputs.income * 10000;
+            const annualSpending = inputs.spending * 10000;
+
+            let consumptionTaxImpact = 0;
+            let incomeTaxImpact = 0;
+            let socialImpact = 0;
+            let benefitImpact = 0;
+
+            if (scenario.mode === 'vat-all') {
+                consumptionTaxImpact = annualSpending * scenario.vatDelta;
+            }
+            if (scenario.mode === 'vat-food') {
+                consumptionTaxImpact = annualSpending * family.foodShare * scenario.vatDelta;
+            }
+            if (scenario.mode === 'income-tax-cut') {
+                const householdCut = 30000;
+                incomeTaxImpact = -householdCut * age.taxWeight * work.incomeTaxWeight;
+            }
+            if (scenario.mode === 'social-up') {
+                const socialRate = work.label === '会社員中心' ? 0.00115 : work.label === '扶養内パート中心' ? 0.0008 : 0.0006;
+                socialImpact = annualIncome * socialRate * age.socialWeight;
+            }
+            if (scenario.mode === 'social-down') {
+                if (inputs.workType === 'dependent-parttime') {
+                    benefitImpact = annualIncome < 1300000 ? 160000 : 270000;
+                } else {
+                    benefitImpact = annualIncome < 5000000 ? 20000 : 0;
+                }
+            }
+            if (scenario.mode === 'cash-benefit') {
+                benefitImpact = family.adults * 20000 + family.children * 40000;
+            }
+            if (scenario.mode === 'child-support') {
+                benefitImpact = family.children * 120000 * age.benefitWeight;
+            }
+
+            const nominalNet = benefitImpact - consumptionTaxImpact - incomeTaxImpact - socialImpact;
+            const priceAdjustment = annualSpending * Math.max(0, scenario.inflationAdjustment);
+            const realNet = nominalNet - priceAdjustment;
+            const realRatio = annualIncome > 0 ? (realNet / annualIncome) * 100 : 0;
+
+            return {
+                scenario,
+                family,
+                age,
+                work,
+                annualIncome,
+                nominalNet,
+                realNet,
+                realRatio,
+                monthlyNet: realNet / 12,
+                decadeReal: realNet * 8.5,
+                breakdown: [
+                    -consumptionTaxImpact / 10000,
+                    -incomeTaxImpact / 10000,
+                    -socialImpact / 10000,
+                    benefitImpact / 10000,
+                    -priceAdjustment / 10000
+                ]
+            };
+        }
+
+        function updateSummary(result) {
+            let line = '額面上の変化と、物価調整後の実質的な変化は一致しません。';
+            if (result.scenario.mode === 'social-down' && result.work.label !== '扶養内パート中心') {
+                line = 'この政策は壁付近の短時間労働者ほど効きやすく、現在の入力条件では波及は限定的です。';
+            } else if (Math.abs(result.realRatio) >= 2) {
+                line = '所得に対する影響率で見ると変化が大きく、家計ターゲティングが比較的強い政策です。';
+            } else if (result.realNet < 0) {
+                line = '家計への実質負担が増えるモデルです。物価調整まで入れるとマイナスが大きくなります。';
+            } else if (result.nominalNet > result.realNet && result.nominalNet > 0) {
+                line = '額面ではプラスでも、物価調整後の改善幅は一段小さくなります。';
+            } else if (result.realNet > 0) {
+                line = 'この条件では、名目だけでなく実質でもプラスが残るモデルです。';
+            }
+
+            document.getElementById('summaryLine').innerText =
+                result.scenario.label + 'では、' + result.family.label + '・' + result.age.label + '・' + result.work.label + 'の条件で ' + line;
+        }
+
+        function updateImpactChart(result) {
+            const labels = ['消費税影響', '所得税影響', '社会保険料', '給付・補助', '物価調整'];
+            const colors = result.breakdown.map(value => value >= 0 ? '#10b981' : '#ef4444');
+
+            if (!impactChart) {
+                const ctx = document.getElementById('impactChart').getContext('2d');
+                impactChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [{
+                            data: result.breakdown,
+                            backgroundColor: colors,
+                            borderRadius: 10
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: {
+                                ticks: {
+                                    callback: (value) => value + '万円'
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                impactChart.data.datasets[0].data = result.breakdown;
+                impactChart.data.datasets[0].backgroundColor = colors;
+                impactChart.update();
+            }
+        }
+
+        function modelCases(scenario) {
+            return [
+                { name: '若年単身・賃貸', householdIncome: 420, personalIncome: 420, inputs: { scenario, ageBand: '20s', familyType: 'single', income: 420, spending: 220, workType: 'employee' } },
+                { name: '子育て世帯・中所得', householdIncome: 850, personalIncome: 550, inputs: { scenario, ageBand: '30s', familyType: 'family4', income: 850, spending: 480, workType: 'employee' } },
+                { name: '高所得共働き', householdIncome: 1600, personalIncome: 900, inputs: { scenario, ageBand: '40s', familyType: 'couple', income: 1600, spending: 600, workType: 'employee' } },
+                { name: '高齢夫婦・年金中心', householdIncome: 320, personalIncome: 160, inputs: { scenario, ageBand: '60plus', familyType: 'senior', income: 320, spending: 260, workType: 'pension' } },
+                { name: '壁付近パート世帯', householdIncome: 520, personalIncome: 120, inputs: { scenario, ageBand: '40s', familyType: 'couple', income: 520, spending: 260, workType: 'dependent-parttime' } }
+            ];
+        }
+
+        function updateCaseChart(scenario) {
+            const cases = modelCases(scenario);
+            const metric = document.getElementById('compareMetric').value;
+            const labels = cases.map(item => `${item.name}\n(世帯年収${item.householdIncome}万円)`);
+            const values = cases.map(item => {
+                const result = calculateModel(item.inputs);
+                if (metric === 'amount') {
+                    return Number((result.realNet / 10000).toFixed(1));
+                }
+                if (metric === 'personal_ratio') {
+                    return Number(((result.realNet / (item.personalIncome * 10000)) * 100).toFixed(2));
+                }
+                return Number(((result.realNet / (item.householdIncome * 10000)) * 100).toFixed(2));
+            });
+            const colors = values.map(value => value >= 0 ? '#0f766e' : '#f97316');
+            const datasetLabel = metric === 'amount' ? '年間実質影響額' : metric === 'personal_ratio' ? '本人収入に対する年間実質影響率' : '世帯年収に対する年間実質影響率';
+            const tickSuffix = metric === 'amount' ? '万円' : '%';
+
+            document.getElementById('caseScenarioLabel').innerText = scenarioConfig[scenario].label;
+
+            if (!caseChart) {
+                const ctx = document.getElementById('caseChart').getContext('2d');
+                caseChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: datasetLabel,
+                            data: values,
+                            backgroundColor: colors,
+                            borderRadius: 10
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: {
+                                ticks: {
+                                    callback: (value) => value + tickSuffix
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                caseChart.data.labels = labels;
+                caseChart.data.datasets[0].label = datasetLabel;
+                caseChart.data.datasets[0].data = values;
+                caseChart.data.datasets[0].backgroundColor = colors;
+                caseChart.options.scales.y.ticks.callback = (value) => value + tickSuffix;
+                caseChart.update();
+            }
+        }
+
+        function runSimulation() {
+            const inputs = currentInputs();
+            updateInputLabels(inputs);
+            const result = calculateModel(inputs);
+            updateScenarioDetail(result.scenario);
+
+            document.getElementById('nominalAnnual').innerText = formatMan(result.nominalNet / 10000);
+            document.getElementById('realAnnual').innerText = formatMan(result.realNet / 10000);
+            document.getElementById('monthlyImpact').innerText = formatMan(result.monthlyNet / 10000);
+            document.getElementById('decadeImpact').innerText = formatMan(result.decadeReal / 10000);
+            document.getElementById('incomeRatio').innerText = (result.realRatio > 0 ? '+' : '') + result.realRatio.toFixed(1) + '%';
+
+            updateSummary(result);
+
+            if (!document.getElementById('simulator').classList.contains('hidden')) {
+                updateImpactChart(result);
+            }
+            if (!document.getElementById('cases').classList.contains('hidden')) {
+                updateCaseChart(inputs.scenario);
+            }
+        }
+
+        window.addEventListener('load', () => {
+            runSimulation();
+        });
+    </script>
+</body>
+</html>
