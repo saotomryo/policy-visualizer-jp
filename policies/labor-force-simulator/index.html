@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>労働力不足対策シミュレーター（外国人 vs AI） - 政策解説シミュレータ</title>
+    <meta name="description" content="減少する国内労働力を補うため、外国人労働者の受け入れとAIによる業務代替をどう組み合わせるかを可視化します。">
+    <link rel="stylesheet" href="../../assets/css/site.css">
+    <style>
+        /* 追加の個別スタイル定義 */
+        .simulator-layout {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05); /* ダークモード想定の場合。既存site.cssのパネル適用があればそれに合わせる */
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .controls-panel {
+            background: linear-gradient(145deg, rgba(30,30,40,0.8), rgba(20,20,30,0.9));
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .control-group label {
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #E2E8F0;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .range-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #94A3B8;
+        }
+
+        .value-display {
+            font-size: 1.1rem;
+            color: #38BDF8;
+            font-weight: 600;
+            text-align: right;
+            margin-top: -0.25rem;
+        }
+
+        @media (max-width: 900px) {
+            .simulator-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .stat-banner {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: rgba(15, 23, 42, 0.6);
+            border-left: 4px solid #38BDF8;
+            padding: 1rem;
+            border-radius: 4px;
+        }
+        .stat-card h4 { margin: 0; font-size: 0.85rem; color: #94A3B8;}
+        .stat-card .value { font-size: 1.5rem; font-weight: bold; color: #F8FAFC; margin-top: 0.5rem;}
+        
+        /* 凡例バッジ用 */
+        .badge {
+            display: inline-block;
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        /* タブ用のスタイル */
+        .tab-nav {
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 2rem;
+            cursor: pointer;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: bold;
+            background: none;
+            border: none;
+            color: #64748b;
+            border-bottom: 4px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover {
+            color: #3b82f6;
+        }
+        .tab-active {
+            color: #3b82f6;
+            border-bottom: 4px solid #3b82f6;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.4s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="site-shell">
+        <header class="hero">
+            <div class="hero__eyebrow"><a href="../../index.html" class="text-link">← ホームに戻る</a></div>
+            <h1>労働力不足対策シミュレーター</h1>
+            <p class="hero__lead">
+                2050年に向けて激減する日本の労働力。<br>
+                「外国人労働者」の受け入れと「AI」の普及スピードのバランスで、<br>
+                未来の社会がどのように維持・発展できるかをシミュレートします。
+            </p>
+        </header>
+
+        <main class="layout-grid">
+            <section class="panel">
+                <!-- タブナビゲーション -->
+                <div class="tab-nav">
+                    <button id="btn-simulator" class="tab-btn tab-active" onclick="switchTab('simulator')">📊 シミュレーター</button>
+                    <button id="btn-analysis" class="tab-btn" onclick="switchTab('analysis')">📝 考察・分析</button>
+                </div>
+
+                <div id="content-simulator" class="tab-content active">
+                    <div class="stat-banner">
+                        <div class="stat-card">
+                            <h4>2050年の労働力需要 (推計)</h4>
+                            <div class="value">約 6,900 万人</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>2050年の充足率 (今すぐ↓)</h4>
+                            <div class="value" id="current-fulfillment">-- %</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>ギャップ総量</h4>
+                            <div class="value" id="current-gap">-- 万人</div>
+                        </div>
+                    </div>
+
+                    <div class="simulator-layout">
+                        <!-- グラフエリア -->
+                        <div class="chart-container">
+                            <canvas id="laborChart"></canvas>
+                            <p style="font-size: 0.85rem; color: #64748B; margin-top: 1rem; text-align: right;">
+                                データ出典: 国立社会保障・人口問題研究所「日本の将来推計人口（令和5年推計）」<br>
+                                ※ベースライン・国内労働力は推計生産年齢人口に基づく簡易モデル
+                            </p>
+                        </div>
+
+                        <!-- コントロールパネル -->
+                        <div class="controls-panel">
+                            <h3>パラメータ設定</h3>
+                            
+                            <div class="control-group">
+                                <label for="ai-slider"><span class="badge" style="background:#A855F7"></span>AIの発展スピード</label>
+                                <input type="range" id="ai-slider" min="0" max="200" value="100">
+                                <div class="range-labels">
+                                    <span>遅い</span>
+                                    <span>普通</span>
+                                    <span>早い</span>
+                                </div>
+                                <div class="value-display" id="ai-value-display">標準的な普及予測</div>
+                            </div>
+
+                            <div class="control-group" style="margin-top: 1rem;">
+                                <label for="foreign-slider"><span class="badge" style="background:#34D399"></span>外国人労働者の新規受け入れ (年/万人)</label>
+                                <input type="range" id="foreign-slider" min="0" max="100" value="10">
+                                <div class="range-labels">
+                                    <span>現状維持(微減)</span>
+                                    <span>積極受け入れ</span>
+                                </div>
+                                <div class="value-display"><span id="foreign-value-display">10</span> 万人/年</div>
+                            </div>
+
+                            <div class="control-group" style="margin-top: 1rem;">
+                                <label for="retirement-slider"><span class="badge" style="background:#3b82f6"></span>現役引退年齢の引き上げ効果</label>
+                                <input type="range" id="retirement-slider" min="65" max="75" value="65" step="1">
+                                <div class="range-labels">
+                                    <span>65歳</span>
+                                    <span>75歳</span>
+                                </div>
+                                <div class="value-display"><span id="retirement-value-display">65</span> 歳 基準</div>
+                            </div>
+                            
+                            <hr style="border-color: rgba(255,255,255,0.1); margin: 1rem 0;">
+                            
+                            <div id="conclusion-text" style="font-size: 0.9rem; line-height: 1.6; color: #CBD5E1;">
+                                <!-- ここにJSから判定結果のテキストが入る -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 考察・分析タブ -->
+                <div id="content-analysis" class="tab-content" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 2.5rem; margin-top: 1rem;">
+                    <h3 style="color: #1e293b; margin-bottom: 1.5rem; font-size: 1.5rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem;">労働力確保のパラダイムシフト</h3>
+                    
+                    <div style="color: #334155; line-height: 1.8; font-size: 1.05rem;">
+                        <p style="margin-bottom: 1.5rem;">
+                            本シミュレータが示す通り、<strong>今後の日本の労働力不足は、AIやロボティクスの導入によって大部分を補える可能性が高い</strong>と推測されます。ソフトウェアにおける生成AIの発展だけでなく、物理的な作業を代替する「フィジカルAI（汎用人型ロボットなど）」の普及が進めば、現業部門のマンパワー不足もカバーすることが可能です。総人口の減少に伴って「必要な労働力の総量（社会維持ライン）」自体も緩やかに減少していくため、AIの発展が標準的なスピードで進むだけでも、労働供給のギャップは急速に埋まっていきます。
+                        </p>
+                        <p style="margin-bottom: 1.5rem;">
+                            一方で、<strong>外国人労働者に大きく依存するシナリオは、今後の日本において現実的とは言えなくなりつつあります。</strong> 昨今の急激な円安による賃金的魅力の低下に加え、新興国自身の経済発展と少子高齢化が進むことで、アジア諸国間で労働力の激しい獲得競争が起こるためです。「日本が外国人労働者を選べる」時代から「選ばれる」あるいは「選ばれない」時代へと変化していることを踏まえると、移民や外国人労働力を前提とした穴埋め戦略はリスクが高いと言えます。
+                        </p>
+                        <p>
+                            結論として、<strong>日本は「安価な労働力」を外部から輸入して既存のビジネスモデルを維持するのではなく、AI・自動化技術への資本投下によって「一人当たりの労働生産性」を飛躍的に高める方向へ舵を切る必要がある</strong>ことが、この試算から浮かび上がってきます。
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Chart.js と JSの読み込み -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // タブ切り替え制御
+        function switchTab(tabId) {
+            document.getElementById('btn-simulator').classList.remove('tab-active');
+            document.getElementById('btn-analysis').classList.remove('tab-active');
+            document.getElementById('content-simulator').classList.remove('active');
+            document.getElementById('content-analysis').classList.remove('active');
+
+            document.getElementById('btn-' + tabId).classList.add('tab-active');
+            document.getElementById('content-' + tabId).classList.add('active');
+        }
+    </script>
+    <script src="./app.js"></script>
+</body>
+</html>
