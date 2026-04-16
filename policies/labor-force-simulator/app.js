@@ -9,6 +9,13 @@ const BASE_AI_AUTOMATION = [50, 250, 600, 1100, 1700, 2500];
 
 // グラフのインスタンス
 let chartInstance = null;
+let industryChartInstance = null;
+
+// 業種ごとのAI基礎代替率 [%] - AIスライダー100の時の基準値
+const BASE_AUTO_IT = [20, 50, 75, 90, 95, 98];               // 最速で代替が進む
+const BASE_AUTO_WHITE = [5, 20, 45, 65, 80, 90];             // 短・中期で急激に代替
+const BASE_AUTO_SIMPLE_PHYSICAL = [2, 15, 35, 60, 75, 85];   // 自動車・単純作業は早期代替
+const BASE_AUTO_COMPLEX_PHYSICAL = [1, 3, 5, 10, 15, 25];    // 複雑な現場労働は非常に遅延する
 
 // UI要素
 const aiSlider = document.getElementById('ai-slider');
@@ -147,6 +154,91 @@ function updateChart() {
                                 return '総供給量: ' + Math.round(total) + ' 万人';
                             }
                         }
+                    }
+                }
+            }
+        });
+    }
+
+    // --- 業種別AI代替率の計算とチャート更新 ---
+    let dataIT = [];
+    let dataWhite = [];
+    let dataSimplePhys = [];
+    let dataComplexPhys = [];
+
+    const aiMultiplier = getAiMultiplier(aiSlider.value);
+
+    YEARS.forEach((year, index) => {
+        let itRate = Math.min(100, BASE_AUTO_IT[index] * aiMultiplier);
+        let whiteRate = Math.min(100, BASE_AUTO_WHITE[index] * aiMultiplier);
+        let simplePhysRate = Math.min(100, BASE_AUTO_SIMPLE_PHYSICAL[index] * aiMultiplier);
+        let complexPhysRate = Math.min(100, BASE_AUTO_COMPLEX_PHYSICAL[index] * aiMultiplier);
+        
+        dataIT.push(itRate);
+        dataWhite.push(whiteRate);
+        dataSimplePhys.push(simplePhysRate);
+        dataComplexPhys.push(complexPhysRate);
+    });
+
+    if (industryChartInstance) {
+        industryChartInstance.data.datasets[0].data = dataIT;
+        industryChartInstance.data.datasets[1].data = dataWhite;
+        industryChartInstance.data.datasets[2].data = dataSimplePhys;
+        industryChartInstance.data.datasets[3].data = dataComplexPhys;
+        industryChartInstance.update();
+    } else {
+        const ctxInd = document.getElementById('industryChart').getContext('2d');
+        industryChartInstance = new Chart(ctxInd, {
+            type: 'line',
+            data: {
+                labels: YEARS,
+                datasets: [
+                    {
+                        label: 'IT・先端技術関連 (約4%)',
+                        data: dataIT,
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                        fill: false,
+                        tension: 0.3,
+                        borderWidth: 3
+                    },
+                    {
+                        label: 'ホワイトカラー・事務職 (約48%)',
+                        data: dataWhite,
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        fill: false,
+                        tension: 0.3,
+                        borderWidth: 3
+                    },
+                    {
+                        label: 'ドライバー・単純作業等 (約8%)',
+                        data: dataSimplePhys,
+                        borderColor: '#10b981', // emerald
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: false,
+                        tension: 0.3,
+                        borderWidth: 3
+                    },
+                    {
+                        label: '複雑な現場労働 (約40%)',
+                        data: dataComplexPhys,
+                        borderColor: '#f59e0b', // amber
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        fill: false,
+                        tension: 0.3,
+                        borderWidth: 3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 100,
+                        title: { display: true, text: 'AI代替率 (%)', color: '#94A3B8' }
                     }
                 }
             }
